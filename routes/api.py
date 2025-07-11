@@ -411,9 +411,9 @@ def get_order_details(order_number):
             'created_at': order.created_at.isoformat(),
             'last_updated_at': order.last_updated_at.isoformat() if order.last_updated_at else None,
             'zone': {
-                'id': order.zone.id,
-                'name': order.zone.name
-            } if order.zone else None,
+                'id': order.delivery_zone.id,
+                'name': order.delivery_zone.name
+            } if order.delivery_zone else None,
             'items': items_data
         }
         

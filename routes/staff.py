@@ -134,8 +134,8 @@ def delivery_dashboard():
     Shows orders that need delivery attention
     """
     
-    # Only delivery staff can access
-    if current_user.role != 'delivery_staff':
+    # Only delivery staff and admin can access
+    if current_user.role not in ['delivery_staff', 'admin']:
         flash('ไม่มีสิทธิ์เข้าถึงหน้านี้', 'error')
         return redirect(url_for('staff.dashboard'))
     
