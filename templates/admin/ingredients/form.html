@@ -1,0 +1,416 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ "แก้ไขวัตถุดิบ" if edit else "เพิ่มวัตถุดิบใหม่" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        background: white;
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    .stock-info {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+    
+    .stock-level {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .stock-normal { background: #d4edda; color: #155724; }
+    .stock-low { background: #fff3cd; color: #856404; }
+    .stock-critical { background: #f8d7da; color: #721c24; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">{{ "แก้ไขวัตถุดิบ" if edit else "เพิ่มวัตถุดิบใหม่" }}</h1>
+            <p class="text-muted">{{ ingredient.name if edit else "กรอกข้อมูลวัตถุดิบใหม่" }}</p>
+        </div>
+        <a href="{{ url_for('admin.ingredient_list') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> กลับ
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="form-container">
+                <form method="POST" id="ingredientForm">
+                    <!-- Basic Information -->
+                    <h5 class="mb-3">ข้อมูลพื้นฐาน</h5>
+                    
+                    <div class="form-group">
+                        <label for="name" class="form-label">
+                            ชื่อวัตถุดิบ <span class="required">*</span>
+                        </label>
+                        <input type="text" 
+                               id="name" 
+                               name="name" 
+                               class="form-control" 
+                               value="{{ ingredient.name if edit else '' }}"
+                               placeholder="เช่น หอมใหญ่, น้ำมันปาล์ม"
+                               required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description" class="form-label">คำอธิบาย</label>
+                        <textarea id="description" 
+                                  name="description" 
+                                  class="form-control" 
+                                  rows="2"
+                                  placeholder="รายละเอียดเพิ่มเติม...">{{ ingredient.description if edit else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="category" class="form-label">หมวดหมู่</label>
+                                <input type="text" 
+                                       id="category" 
+                                       name="category" 
+                                       class="form-control" 
+                                       value="{{ ingredient.category if edit else '' }}"
+                                       placeholder="เช่น ผัก, เครื่องปรุง, เนื้อสัตว์"
+                                       list="categories">
+                                <datalist id="categories">
+                                    <option value="ผัก">
+                                    <option value="เครื่องปรุง">
+                                    <option value="เนื้อสัตว์">
+                                    <option value="อาหารทะเล">
+                                    <option value="ผลไม้">
+                                    <option value="เครื่องดื่ม">
+                                    <option value="น้ำมันและไขมัน">
+                                    <option value="แป้งและอื่นๆ">
+                                </datalist>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="unit" class="form-label">
+                                    หน่วยนับ <span class="required">*</span>
+                                </label>
+                                <select id="unit" name="unit" class="form-select" required>
+                                    <option value="">เลือกหน่วยนับ</option>
+                                    <option value="กก." {{ 'selected' if edit and ingredient.unit == 'กก.' else '' }}>กก. (กิโลกรัม)</option>
+                                    <option value="กรัม" {{ 'selected' if edit and ingredient.unit == 'กรัม' else '' }}>กรัม</option>
+                                    <option value="ลิตร" {{ 'selected' if edit and ingredient.unit == 'ลิตร' else '' }}>ลิตร</option>
+                                    <option value="มล." {{ 'selected' if edit and ingredient.unit == 'มล.' else '' }}>มล. (มิลลิลิตร)</option>
+                                    <option value="ชิ้น" {{ 'selected' if edit and ingredient.unit == 'ชิ้น' else '' }}>ชิ้น</option>
+                                    <option value="ใบ" {{ 'selected' if edit and ingredient.unit == 'ใบ' else '' }}>ใบ</option>
+                                    <option value="หัว" {{ 'selected' if edit and ingredient.unit == 'หัว' else '' }}>หัว</option>
+                                    <option value="ลูก" {{ 'selected' if edit and ingredient.unit == 'ลูก' else '' }}>ลูก</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stock Information -->
+                    <h5 class="mb-3 mt-4">ข้อมูลสต็อก</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="stock_quantity" class="form-label">
+                                    จำนวนปัจจุบัน <span class="required">*</span>
+                                </label>
+                                <input type="number" 
+                                       id="stock_quantity" 
+                                       name="stock_quantity" 
+                                       class="form-control" 
+                                       value="{{ ingredient.stock_quantity if edit else '' }}"
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="0.00"
+                                       required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="low_stock_threshold" class="form-label">
+                                    เกณฑ์สต็อกต่ำ <span class="required">*</span>
+                                </label>
+                                <input type="number" 
+                                       id="low_stock_threshold" 
+                                       name="low_stock_threshold" 
+                                       class="form-control" 
+                                       value="{{ ingredient.low_stock_threshold if edit else '' }}"
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="10.00"
+                                       required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="cost_per_unit" class="form-label">ต้นทุนต่อหน่วย (บาท)</label>
+                                <input type="number" 
+                                       id="cost_per_unit" 
+                                       name="cost_per_unit" 
+                                       class="form-control" 
+                                       value="{{ ingredient.cost_per_unit if edit else '' }}"
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" 
+                                   id="is_active" 
+                                   name="is_active" 
+                                   class="form-check-input"
+                                   {{ 'checked' if (edit and ingredient.is_active) or not edit else '' }}>
+                            <label for="is_active" class="form-check-label">
+                                เปิดใช้งาน
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Submit Buttons -->
+                    <div class="form-group mt-4 pt-3 border-top">
+                        <button type="submit" class="btn btn-primary me-3">
+                            <i class="fas fa-save"></i>
+                            {{ "บันทึกการแก้ไข" if edit else "เพิ่มวัตถุดิบ" }}
+                        </button>
+                        <a href="{{ url_for('admin.ingredient_list') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> ยกเลิก
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Stock Status Panel -->
+        <div class="col-lg-4">
+            {% if edit %}
+            <div class="form-container">
+                <h5 class="mb-3">สถานะสต็อก</h5>
+                
+                <div class="text-center mb-3">
+                    {% set stock_level = 'normal' %}
+                    {% if ingredient.stock_quantity <= 0 %}
+                        {% set stock_level = 'critical' %}
+                    {% elif ingredient.stock_quantity <= ingredient.low_stock_threshold %}
+                        {% set stock_level = 'low' %}
+                    {% endif %}
+                    
+                    <div class="stock-level stock-{{ stock_level }}">
+                        {% if stock_level == 'critical' %}
+                            <i class="fas fa-exclamation-triangle"></i> หมด
+                        {% elif stock_level == 'low' %}
+                            <i class="fas fa-exclamation-circle"></i> ต่ำ
+                        {% else %}
+                            <i class="fas fa-check-circle"></i> ปกติ
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="stock-info">
+                    <div class="row text-center">
+                        <div class="col-12 mb-2">
+                            <h4 class="mb-0">{{ ingredient.stock_quantity }} {{ ingredient.unit }}</h4>
+                            <small class="text-muted">จำนวนปัจจุบัน</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <strong>{{ ingredient.low_stock_threshold }}</strong><br>
+                                <small class="text-muted">เกณฑ์ต่ำ</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <strong>฿{{ "%.2f"|format(ingredient.cost_per_unit or 0) }}</strong><br>
+                            <small class="text-muted">ต้นทุน/หน่วย</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="mt-3">
+                    <h6>การจัดการสต็อก</h6>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="showStockAdjustment('in')">
+                            <i class="fas fa-plus"></i> เพิ่มสต็อก
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="showStockAdjustment('out')">
+                            <i class="fas fa-minus"></i> ลดสต็อก
+                        </button>
+                        <a href="{{ url_for('admin.ingredient_history', ingredient_id=ingredient.id) }}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-history"></i> ประวัติการเปลี่ยนแปลง
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="form-container">
+                <h5 class="mb-3">คำแนะนำ</h5>
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-lightbulb"></i> เคล็ดลับ</h6>
+                    <ul class="mb-0 small">
+                        <li>ตั้งเกณฑ์สต็อกต่ำที่เหมาะสม</li>
+                        <li>ระบุต้นทุนต่อหน่วยเพื่อคำนวณราคาขาย</li>
+                        <li>เลือกหน่วยนับให้ตรงกับการใช้งานจริง</li>
+                        <li>ใช้หมวดหมู่เพื่อจัดกลุ่มวัตถุดิบ</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Stock Adjustment Modal -->
+<div class="modal fade" id="stockAdjustmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adjustmentTitle">ปรับสต็อก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="stockAdjustmentForm">
+                <div class="modal-body">
+                    <input type="hidden" id="adjustment_type" name="adjustment_type">
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">จำนวนที่ต้องการ <span id="adjustmentAction"></span></label>
+                        <input type="number" id="adjustment_quantity" name="quantity" class="form-control" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">เหตุผล</label>
+                        <select id="adjustment_reason" name="reason" class="form-select" required>
+                            <option value="">เลือกเหตุผล</option>
+                            <option value="purchase">ซื้อเพิ่ม</option>
+                            <option value="usage">ใช้งาน</option>
+                            <option value="waste">เสียหาย/เน่าเสีย</option>
+                            <option value="correction">แก้ไขสต็อก</option>
+                            <option value="other">อื่นๆ</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">หมายเหตุ</label>
+                        <textarea id="adjustment_notes" name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Form validation
+$('#ingredientForm').on('submit', function(e) {
+    let isValid = true;
+    
+    // Reset previous errors
+    $('.form-control').removeClass('is-invalid');
+    
+    // Validate required fields
+    if (!$('#name').val().trim()) {
+        $('#name').addClass('is-invalid');
+        isValid = false;
+    }
+    
+    if (!$('#unit').val()) {
+        $('#unit').addClass('is-invalid');
+        isValid = false;
+    }
+    
+    const stockQuantity = parseFloat($('#stock_quantity').val());
+    if (isNaN(stockQuantity) || stockQuantity < 0) {
+        $('#stock_quantity').addClass('is-invalid');
+        isValid = false;
+    }
+    
+    const threshold = parseFloat($('#low_stock_threshold').val());
+    if (isNaN(threshold) || threshold < 0) {
+        $('#low_stock_threshold').addClass('is-invalid');
+        isValid = false;
+    }
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง');
+    }
+});
+
+{% if edit %}
+// Stock adjustment functions
+function showStockAdjustment(type) {
+    const title = type === 'in' ? 'เพิ่มสต็อก' : 'ลดสต็อก';
+    const action = type === 'in' ? 'เพิ่ม' : 'ลด';
+    
+    $('#adjustmentTitle').text(title);
+    $('#adjustmentAction').text(action);
+    $('#adjustment_type').val(type);
+    $('#stockAdjustmentForm')[0].reset();
+    $('#adjustment_type').val(type);
+    $('#stockAdjustmentModal').modal('show');
+}
+
+$('#stockAdjustmentForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        type: $('#adjustment_type').val(),
+        quantity: parseFloat($('#adjustment_quantity').val()),
+        reason: $('#adjustment_reason').val(),
+        notes: $('#adjustment_notes').val()
+    };
+    
+    $.ajax({
+        url: `/admin/api/ingredient/{{ ingredient.id }}/adjust-stock`,
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(formData),
+        success: function(response) {
+            $('#stockAdjustmentModal').modal('hide');
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('เกิดข้อผิดพลาด: ' + (xhr.responseJSON?.error || 'ไม่สามารถปรับสต็อกได้'));
+        }
+    });
+});
+{% endif %}
+</script>
+{% endblock %}

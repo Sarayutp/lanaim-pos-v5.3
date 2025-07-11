@@ -1,0 +1,83 @@
+# Production Requirements
+# Updated requirements.txt for production deployment
+
+# Core Flask framework
+Flask==2.3.3
+Werkzeug==2.3.7
+
+# Database and ORM
+SQLAlchemy==2.0.20
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.5
+
+# Security and authentication
+Flask-Login==0.6.3
+Flask-WTF==1.1.1
+WTForms==3.0.1
+bcrypt==4.0.1
+
+# Real-time features
+Flask-SocketIO==5.3.6
+python-socketio==5.8.0
+python-engineio==4.7.1
+
+# Caching and performance
+redis==4.6.0
+hiredis==2.2.3
+
+# Background tasks and scheduling
+schedule==1.2.0
+APScheduler==3.10.4
+
+# System monitoring
+psutil==5.9.5
+
+# Production server
+gunicorn==21.2.0
+eventlet==0.33.3
+
+# File handling and utilities
+Pillow==10.0.0
+python-dotenv==1.0.0
+
+# Date and time handling
+python-dateutil==2.8.2
+
+# Email support (optional)
+Flask-Mail==0.9.1
+
+# Development and testing (optional)
+pytest==7.4.2
+pytest-flask==1.2.0
+Flask-Testing==0.8.1
+
+# Backup and compression
+zipfile-deflate64==0.2.0
+
+# Logging
+loguru==0.7.2
+
+# Configuration management
+python-decouple==3.8
+
+# Production monitoring (optional)
+sentry-sdk[flask]==1.32.0
+
+# Rate limiting
+Flask-Limiter==3.5.0
+
+# CORS support
+Flask-CORS==4.0.0
+
+# JSON handling
+marshmallow==3.20.1
+Flask-Marshmallow==0.15.0
+
+# Environment variables
+environs==9.5.0
+
+# SSL/TLS support
+pyOpenSSL==23.2.0
+
+# Process management
+supervisor==4.2.5

@@ -1,0 +1,183 @@
+{% extends "admin/base.html" %}
+{% block title %}จัดการโซนจัดส่ง{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-8 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">จัดการโซนจัดส่ง</h1>
+                    <p class="mt-2 text-blue-100">จัดการพื้นที่และเขตการจัดส่งอาหาร</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.zone_create') }}" 
+                       class="bg-white bg-opacity-20 hover:bg-opacity-30 px-6 py-3 rounded-lg transition-colors inline-flex items-center">
+                        <i class="fas fa-plus mr-2"></i>
+                        เพิ่มโซนใหม่
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i class="fas fa-map-marker-alt text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">โซนทั้งหมด</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ zones|length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-check-circle text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">เปิดใช้งาน</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ zones|selectattr('is_active')|list|length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <i class="fas fa-truck text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ค่าส่งเฉลี่ย</p>
+                    <p class="text-2xl font-bold text-gray-900">฿30</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone List -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">รายการโซนจัดส่ง</h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            ชื่อโซน
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            ค่าจัดส่ง
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            ระยะเวลาจัดส่ง
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            สถานะ
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            การดำเนินการ
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for zone in zones %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <i class="fas fa-map-marker-alt text-blue-600"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">{{ zone.name }}</div>
+                                    {% if zone.description %}
+                                        <div class="text-sm text-gray-500">{{ zone.description }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <span class="text-gray-500">ตามระยะทาง</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <span class="text-gray-500">30 นาที</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if zone.is_active %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    เปิดใช้งาน
+                                </span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                    ปิดใช้งาน
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <a href="{{ url_for('admin.zone_edit', zone_id=zone.id) }}" 
+                               class="text-indigo-600 hover:text-indigo-900">
+                                <i class="fas fa-edit mr-1"></i>แก้ไข
+                            </a>
+                            <button onclick="toggleZoneStatus({{ zone.id }}, {{ 'true' if zone.is_active else 'false' }})" 
+                                    class="text-yellow-600 hover:text-yellow-900">
+                                <i class="fas fa-toggle-{{ 'off' if zone.is_active else 'on' }} mr-1"></i>
+                                {{ 'ปิด' if zone.is_active else 'เปิด' }}
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not zones %}
+        <div class="text-center py-12">
+            <i class="fas fa-map-marker-alt text-4xl text-gray-400 mb-4"></i>
+            <p class="text-gray-500 text-lg">ยังไม่มีโซนจัดส่งในระบบ</p>
+            <a href="{{ url_for('admin.zone_create') }}" 
+               class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <i class="fas fa-plus mr-2"></i>
+                เพิ่มโซนแรก
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+async function toggleZoneStatus(zoneId, currentStatus) {
+    const action = currentStatus ? 'ปิดใช้งาน' : 'เปิดใช้งาน';
+    
+    if (!confirm(`คุณต้องการ${action}โซนนี้หรือไม่?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/zone/${zoneId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            location.reload();
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + result.message);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาด: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

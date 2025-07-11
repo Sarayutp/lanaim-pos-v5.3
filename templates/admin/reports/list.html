@@ -1,0 +1,333 @@
+{% extends "admin/base.html" %}
+{% block title %}รายงานและสถิติ{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">รายงานและสถิติ</h1>
+        <div class="flex space-x-3">
+            <button onclick="exportReport()" class="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:from-green-700 hover:to-blue-700 transition-all duration-200 shadow-lg">
+                <i class="fas fa-download mr-2"></i>ส่งออกรายงาน
+            </button>
+            <button onclick="printReport()" class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg">
+                <i class="fas fa-print mr-2"></i>พิมพ์รายงาน
+            </button>
+        </div>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น</label>
+                <input type="date" id="startDate" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">วันที่สิ้นสุด</label>
+                <input type="date" id="endDate" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div>
+                <button onclick="applyDateFilter()" class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700">
+                    <i class="fas fa-filter mr-2"></i>กรองข้อมูล
+                </button>
+            </div>
+            <div>
+                <button onclick="resetDateFilter()" class="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600">
+                    <i class="fas fa-refresh mr-2"></i>รีเซ็ต
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ยอดขายรวม</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_sales }}฿</p>
+                    <p class="text-sm text-green-600">{{ sales_orders }} ออเดอร์</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ออเดอร์เฉลี่ย</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ avg_order_value }}฿</p>
+                    <p class="text-sm text-blue-600">ต่อออเดอร์</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">เมนูขายดี</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ top_menu_count }}</p>
+                    <p class="text-sm text-yellow-600">{{ top_menu_name }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">เวลาเฉลี่ย</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ avg_preparation_time }} นาที</p>
+                    <p class="text-sm text-purple-600">การเตรียมอาหาร</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Sales Chart -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">กราฟยอดขายรายวัน</h3>
+            <div class="h-64">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Popular Menu Chart -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">เมนูยอดนิยม</h3>
+            <div class="h-64">
+                <canvas id="menuChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Reports -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Best Selling Items -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">เมนูขายดี Top 10</h3>
+            <div class="space-y-3">
+                {% for item in top_selling_items %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-bold">
+                            {{ loop.index }}
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-900">{{ item.menu_name }}</p>
+                            <p class="text-xs text-gray-500">{{ item.quantity }} ครั้ง</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-gray-900">{{ "{:,.0f}".format(item.total_revenue) }}฿</p>
+                        <p class="text-xs text-gray-500">รายได้</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Recent Stock Adjustments -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">การปรับปรุงสต็อกล่าสุด</h3>
+            <div class="space-y-3">
+                {% for adjustment in recent_adjustments %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm
+                            {% if adjustment.adjustment_type == 'add' %}bg-green-100 text-green-600
+                            {% elif adjustment.adjustment_type == 'remove' %}bg-red-100 text-red-600
+                            {% else %}bg-blue-100 text-blue-600{% endif %}">
+                            {% if adjustment.adjustment_type == 'add' %}<i class="fas fa-plus"></i>
+                            {% elif adjustment.adjustment_type == 'remove' %}<i class="fas fa-minus"></i>
+                            {% else %}<i class="fas fa-edit"></i>{% endif %}
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-900">{{ adjustment.ingredient_name }}</p>
+                            <p class="text-xs text-gray-500">{{ adjustment.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-gray-900">
+                            {% if adjustment.adjustment_type == 'add' %}+{% elif adjustment.adjustment_type == 'remove' %}-{% endif %}{{ adjustment.quantity }}
+                        </p>
+                        <p class="text-xs text-gray-500">{{ adjustment.reason[:20] }}{% if adjustment.reason|length > 20 %}...{% endif %}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Status Summary -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">สถานะออเดอร์วันนี้</h3>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                <div class="text-2xl font-bold text-yellow-600">{{ order_status.pending }}</div>
+                <div class="text-sm text-gray-600">รอการจัดเตรียม</div>
+            </div>
+            <div class="text-center p-4 bg-blue-50 rounded-lg">
+                <div class="text-2xl font-bold text-blue-600">{{ order_status.preparing }}</div>
+                <div class="text-sm text-gray-600">กำลังเตรียม</div>
+            </div>
+            <div class="text-center p-4 bg-purple-50 rounded-lg">
+                <div class="text-2xl font-bold text-purple-600">{{ order_status.ready }}</div>
+                <div class="text-sm text-gray-600">พร้อมเสิร์ฟ</div>
+            </div>
+            <div class="text-center p-4 bg-indigo-50 rounded-lg">
+                <div class="text-2xl font-bold text-indigo-600">{{ order_status.delivering }}</div>
+                <div class="text-sm text-gray-600">กำลังส่ง</div>
+            </div>
+            <div class="text-center p-4 bg-green-50 rounded-lg">
+                <div class="text-2xl font-bold text-green-600">{{ order_status.completed }}</div>
+                <div class="text-sm text-gray-600">สำเร็จ</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Set default dates (last 7 days)
+const today = new Date();
+const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+document.getElementById('startDate').value = lastWeek.toISOString().split('T')[0];
+document.getElementById('endDate').value = today.toISOString().split('T')[0];
+
+// Sales Chart
+const salesCtx = document.getElementById('salesChart').getContext('2d');
+const salesChart = new Chart(salesCtx, {
+    type: 'line',
+    data: {
+        labels: {{ sales_chart_labels | tojson }},
+        datasets: [{
+            label: 'ยอดขาย (฿)',
+            data: {{ sales_chart_data | tojson }},
+            borderColor: 'rgb(79, 70, 229)',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString() + '฿';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Menu Chart
+const menuCtx = document.getElementById('menuChart').getContext('2d');
+const menuChart = new Chart(menuCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ menu_chart_labels | tojson }},
+        datasets: [{
+            data: {{ menu_chart_data | tojson }},
+            backgroundColor: [
+                '#3B82F6',
+                '#10B981',
+                '#F59E0B',
+                '#EF4444',
+                '#8B5CF6',
+                '#06B6D4',
+                '#84CC16',
+                '#F97316'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+function applyDateFilter() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('กรุณาเลือกวันที่เริ่มต้นและวันที่สิ้นสุด');
+        return;
+    }
+    
+    if (new Date(startDate) > new Date(endDate)) {
+        alert('วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด');
+        return;
+    }
+    
+    window.location.href = `/admin/reports?start_date=${startDate}&end_date=${endDate}`;
+}
+
+function resetDateFilter() {
+    const today = new Date();
+    const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    document.getElementById('startDate').value = lastWeek.toISOString().split('T')[0];
+    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+    
+    window.location.href = '/admin/reports';
+}
+
+function exportReport() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    window.open(`/admin/api/reports/export?start_date=${startDate}&end_date=${endDate}`, '_blank');
+}
+
+function printReport() {
+    window.print();
+}
+</script>
+
+<style>
+@media print {
+    .no-print, button {
+        display: none !important;
+    }
+    
+    .bg-white {
+        background: white !important;
+    }
+    
+    .shadow-lg {
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}

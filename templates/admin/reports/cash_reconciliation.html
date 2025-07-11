@@ -1,0 +1,342 @@
+{% extends "admin/admin_base.html" %}
+
+{% block title %}กระทบยอดเงินสด - LanAim POS{% endblock %}
+
+{% block header %}
+<div class="flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">กระทบยอดเงินสด</h1>
+        <p class="text-gray-600">ตรวจสอบและกระทบยอดเงินสดประจำวัน</p>
+    </div>
+    
+    <div class="flex space-x-3">
+        <button onclick="printReport()" 
+                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+            <i class="fas fa-print mr-2"></i>พิมพ์รายงาน
+        </button>
+        <a href="{{ url_for('admin.reports') }}" 
+           class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i>กลับ
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Date Selection -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">เลือกวันที่กระทบยอด</h3>
+        <div class="flex items-center space-x-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">วันที่</label>
+                <input type="date" id="reconcileDate" 
+                       value="{{ selected_date.strftime('%Y-%m-%d') if selected_date else today.strftime('%Y-%m-%d') }}"
+                       class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div class="pt-6">
+                <button onclick="loadReconciliation()" 
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-search mr-2"></i>ดูข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i class="fas fa-cash-register text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ยอดขายรวม</p>
+                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(total_sales if total_sales else 0) }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-money-bills text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">เงินสดรับ</p>
+                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(cash_received if cash_received else 0) }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <i class="fas fa-credit-card text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">การโอน/บัตร</p>
+                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(digital_payments if digital_payments else 0) }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-calculator text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ส่วนต่าง</p>
+                    <p class="text-2xl font-bold {{ 'text-red-600' if difference and difference < 0 else 'text-green-600' }}">
+                        ฿{{ "{:,.0f}".format(difference if difference else 0) }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reconciliation Form -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-6">กระทบยอดเงินสด</h3>
+        
+        <form id="reconciliationForm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-medium text-gray-900 mb-4">เงินสดจากระบบ</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ยอดขายเงินสด</label>
+                            <input type="number" id="systemCash" readonly
+                                   value="{{ cash_sales if cash_sales else 0 }}"
+                                   class="w-full border-gray-300 rounded-md bg-gray-50">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เงินทอน</label>
+                            <input type="number" id="systemChange" readonly
+                                   value="{{ total_change if total_change else 0 }}"
+                                   class="w-full border-gray-300 rounded-md bg-gray-50">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เงินสดสุทธิ</label>
+                            <input type="number" id="netCash" readonly
+                                   value="{{ net_cash if net_cash else 0 }}"
+                                   class="w-full border-gray-300 rounded-md bg-gray-50 font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-medium text-gray-900 mb-4">เงินสดจริง</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เงินต้นยกมา</label>
+                            <input type="number" id="openingCash" step="0.01"
+                                   value="{{ opening_cash if opening_cash else 0 }}"
+                                   class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เงินในลิ้นชัก</label>
+                            <input type="number" id="actualCash" step="0.01"
+                                   value="{{ actual_cash if actual_cash else 0 }}"
+                                   oninput="calculateDifference()"
+                                   class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เงินเบิกออก</label>
+                            <input type="number" id="withdrawals" step="0.01"
+                                   value="{{ withdrawals if withdrawals else 0 }}"
+                                   oninput="calculateDifference()"
+                                   class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Difference Display -->
+            <div class="mt-6 p-4 rounded-lg bg-gray-50 border-2" id="differenceDisplay">
+                <div class="flex items-center justify-between">
+                    <span class="text-lg font-medium text-gray-900">ผลต่าง:</span>
+                    <span id="differenceAmount" class="text-2xl font-bold">฿0.00</span>
+                </div>
+                <div class="mt-2">
+                    <span class="text-sm text-gray-600">คำอธิบาย: </span>
+                    <span id="differenceExplanation" class="text-sm"></span>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">หมายเหตุ</label>
+                <textarea id="notes" rows="3" placeholder="บันทึกข้อสังเกต หรือสาเหตุของความผิดแปลก..."
+                          class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">{{ notes if notes else '' }}</textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="mt-6 flex space-x-4">
+                <button type="button" onclick="saveReconciliation()" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-save mr-2"></i>บันทึกการกระทบยอด
+                </button>
+                <button type="button" onclick="resetForm()" 
+                        class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600">
+                    <i class="fas fa-undo mr-2"></i>รีเซ็ต
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Reconciliation History -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">ประวัติการกระทบยอด</h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เงินสดระบบ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เงินสดจริง</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผลต่าง</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผู้บันทึก</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for record in reconciliation_history if reconciliation_history else [] %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ record.date.strftime('%d/%m/%Y') if record.date else '' }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ฿{{ "{:,.2f}".format(record.system_cash if record.system_cash else 0) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ฿{{ "{:,.2f}".format(record.actual_cash if record.actual_cash else 0) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <span class="{{ 'text-red-600' if record.difference and record.difference < 0 else 'text-green-600' }}">
+                                ฿{{ "{:,.2f}".format(record.difference if record.difference else 0) }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if record.difference == 0 %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    ตรงกัน
+                                </span>
+                            {% elif record.difference and abs(record.difference) <= 10 %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    ผิดแปลกเล็กน้อย
+                                </span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                    ต้องตรวจสอบ
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ record.staff_name if record.staff_name else 'ระบบ' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not reconciliation_history %}
+        <div class="text-center py-12">
+            <i class="fas fa-file-invoice-dollar text-4xl text-gray-400 mb-4"></i>
+            <p class="text-gray-500 text-lg">ยังไม่มีประวัติการกระทบยอด</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function calculateDifference() {
+    const netCash = parseFloat(document.getElementById('netCash').value) || 0;
+    const openingCash = parseFloat(document.getElementById('openingCash').value) || 0;
+    const actualCash = parseFloat(document.getElementById('actualCash').value) || 0;
+    const withdrawals = parseFloat(document.getElementById('withdrawals').value) || 0;
+    
+    const expectedCash = netCash + openingCash - withdrawals;
+    const difference = actualCash - expectedCash;
+    
+    // Update display
+    const differenceDisplay = document.getElementById('differenceDisplay');
+    const differenceAmount = document.getElementById('differenceAmount');
+    const differenceExplanation = document.getElementById('differenceExplanation');
+    
+    differenceAmount.textContent = `฿${difference.toLocaleString('th-TH', {minimumFractionDigits: 2})}`;
+    
+    if (difference === 0) {
+        differenceDisplay.className = 'mt-6 p-4 rounded-lg bg-green-50 border-2 border-green-200';
+        differenceAmount.className = 'text-2xl font-bold text-green-600';
+        differenceExplanation.textContent = 'เงินสดตรงกัน';
+    } else if (difference > 0) {
+        differenceDisplay.className = 'mt-6 p-4 rounded-lg bg-blue-50 border-2 border-blue-200';
+        differenceAmount.className = 'text-2xl font-bold text-blue-600';
+        differenceExplanation.textContent = 'เงินสดเกิน (มีเงินมากกว่าที่คาดไว้)';
+    } else {
+        differenceDisplay.className = 'mt-6 p-4 rounded-lg bg-red-50 border-2 border-red-200';
+        differenceAmount.className = 'text-2xl font-bold text-red-600';
+        differenceExplanation.textContent = 'เงินสดขาด (มีเงินน้อยกว่าที่คาดไว้)';
+    }
+}
+
+function loadReconciliation() {
+    const date = document.getElementById('reconcileDate').value;
+    if (date) {
+        window.location.href = `{{ url_for('admin.cash_reconciliation') }}?date=${date}`;
+    }
+}
+
+function saveReconciliation() {
+    const formData = {
+        date: document.getElementById('reconcileDate').value,
+        opening_cash: document.getElementById('openingCash').value,
+        actual_cash: document.getElementById('actualCash').value,
+        withdrawals: document.getElementById('withdrawals').value,
+        notes: document.getElementById('notes').value
+    };
+    
+    // Here you would typically send this data to the server
+    fetch('/admin/save-reconciliation', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('บันทึกการกระทบยอดเรียบร้อยแล้ว');
+            location.reload();
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    });
+}
+
+function resetForm() {
+    document.getElementById('reconciliationForm').reset();
+    calculateDifference();
+}
+
+function printReport() {
+    window.print();
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    calculateDifference();
+});
+</script>
+{% endblock %}

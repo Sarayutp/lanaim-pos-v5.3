@@ -1,0 +1,363 @@
+{% extends "admin/base.html" %}
+{% block title %}Peak Hours Analysis{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-8 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Peak Hours Analysis</h1>
+                    <p class="mt-2 text-blue-100">วิเคราะห์ช่วงเวลายอดนิยมและแพทเทิร์นการสั่งออเดอร์</p>
+                </div>
+                <div class="text-right">
+                    <button onclick="refreshData()" 
+                            class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>
+                        รีเฟรชข้อมูล
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Range Selector -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex flex-wrap items-center gap-4">
+            <label class="text-sm font-medium text-gray-700">ช่วงเวลา:</label>
+            <select id="time-range" onchange="updateAnalysis()" 
+                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="7">7 วันล่าสุด</option>
+                <option value="14">14 วันล่าสุด</option>
+                <option value="30" selected>30 วันล่าสุด</option>
+            </select>
+            
+            <button onclick="updateAnalysis()" 
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <i class="fas fa-chart-bar mr-2"></i>
+                วิเคราะห์
+            </button>
+        </div>
+    </div>
+
+    <!-- Peak Hour Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center mb-2">
+                <i class="fas fa-clock text-blue-600 mr-2"></i>
+                <h3 class="font-semibold text-gray-900">Peak Hour</h3>
+            </div>
+            <p class="text-3xl font-bold text-blue-600" id="peak-hour-time">-</p>
+            <p class="text-sm text-gray-600 mt-1" id="peak-hour-orders">- orders on average</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center mb-2">
+                <i class="fas fa-trending-up text-green-600 mr-2"></i>
+                <h3 class="font-semibold text-gray-900">Busiest Period</h3>
+            </div>
+            <p class="text-3xl font-bold text-green-600" id="busiest-period">-</p>
+            <p class="text-sm text-gray-600 mt-1">ช่วงเวลาที่มีออเดอร์มากที่สุด</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-amber-500">
+            <div class="flex items-center mb-2">
+                <i class="fas fa-moon text-amber-600 mr-2"></i>
+                <h3 class="font-semibold text-gray-900">Quietest Hour</h3>
+            </div>
+            <p class="text-3xl font-bold text-amber-600" id="quietest-hour">-</p>
+            <p class="text-sm text-gray-600 mt-1" id="quietest-hour-orders">- orders on average</p>
+        </div>
+    </div>
+
+    <!-- Hourly Chart -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-chart-line text-blue-600 mr-2"></i>
+            Orders by Hour
+        </h3>
+        <div class="h-96">
+            <canvas id="hourly-chart"></canvas>
+        </div>
+    </div>
+
+    <!-- Hourly Details Table -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-table text-green-600 mr-2"></i>
+            Detailed Hourly Statistics
+        </h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Hour
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Avg Orders
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Avg Revenue
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Performance
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="hourly-table" class="bg-white divide-y divide-gray-200">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Business Insights -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-lightbulb text-yellow-600 mr-2"></i>
+            Business Insights
+        </h3>
+        <div id="insights" class="space-y-3">
+            <!-- Insights will be populated here -->
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let hourlyChart = null;
+
+async function updateAnalysis() {
+    const days = document.getElementById('time-range').value;
+    
+    try {
+        showLoading();
+        
+        const response = await fetch(`/admin/api/analytics/peak-hours?days=${days}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            updateSummaryStats(data);
+            updateHourlyChart(data.data);
+            updateHourlyTable(data.data);
+            generateInsights(data.data, data.peak_hour);
+        } else {
+            showError('ไม่สามารถโหลดข้อมูลได้: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+    }
+}
+
+function updateSummaryStats(data) {
+    const peakHour = data.peak_hour;
+    const allData = data.data;
+    
+    // Find peak hour
+    document.getElementById('peak-hour-time').textContent = peakHour.hour;
+    document.getElementById('peak-hour-orders').textContent = 
+        `${peakHour.avg_orders.toFixed(1)} orders on average`;
+    
+    // Find busiest period (consecutive hours with high orders)
+    let maxSum = 0;
+    let bestPeriod = '';
+    for (let i = 0; i < allData.length - 2; i++) {
+        const sum = allData[i].avg_orders + allData[i+1].avg_orders + allData[i+2].avg_orders;
+        if (sum > maxSum) {
+            maxSum = sum;
+            bestPeriod = `${allData[i].hour} - ${allData[i+2].hour}`;
+        }
+    }
+    document.getElementById('busiest-period').textContent = bestPeriod;
+    
+    // Find quietest hour
+    const quietest = allData.reduce((min, curr) => 
+        curr.avg_orders < min.avg_orders ? curr : min
+    );
+    document.getElementById('quietest-hour').textContent = quietest.hour;
+    document.getElementById('quietest-hour-orders').textContent = 
+        `${quietest.avg_orders.toFixed(1)} orders on average`;
+}
+
+function updateHourlyChart(data) {
+    const ctx = document.getElementById('hourly-chart').getContext('2d');
+    
+    if (hourlyChart) {
+        hourlyChart.destroy();
+    }
+    
+    hourlyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.hour),
+            datasets: [{
+                label: 'Average Orders',
+                data: data.map(d => d.avg_orders),
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.3,
+                fill: true
+            }, {
+                label: 'Average Revenue (฿)',
+                data: data.map(d => d.avg_revenue),
+                borderColor: 'rgb(16, 185, 129)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.3,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Orders'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Revenue (฿)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            }
+        }
+    });
+}
+
+function updateHourlyTable(data) {
+    const tbody = document.getElementById('hourly-table');
+    
+    // Sort by avg_orders for better visualization
+    const sortedData = [...data].sort((a, b) => b.avg_orders - a.avg_orders);
+    
+    tbody.innerHTML = sortedData.map(hour => {
+        const performance = getPerformanceLevel(hour.avg_orders, data);
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    ${hour.hour}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${hour.avg_orders.toFixed(1)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ฿${hour.avg_revenue.toFixed(0)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${performance.class}">
+                        ${performance.text}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function getPerformanceLevel(orders, allData) {
+    const maxOrders = Math.max(...allData.map(d => d.avg_orders));
+    const percentage = (orders / maxOrders) * 100;
+    
+    if (percentage >= 80) return { class: 'bg-green-100 text-green-800', text: 'High' };
+    if (percentage >= 50) return { class: 'bg-yellow-100 text-yellow-800', text: 'Medium' };
+    return { class: 'bg-red-100 text-red-800', text: 'Low' };
+}
+
+function generateInsights(data, peakHour) {
+    const insights = [];
+    
+    // Peak hour insight
+    insights.push({
+        icon: 'fas fa-clock',
+        text: `ช่วงเวลา ${peakHour.hour} เป็นช่วงที่มีออเดอร์มากที่สุด โดยเฉลี่ย ${peakHour.avg_orders.toFixed(1)} ออเดอร์/ชั่วโมง`,
+        type: 'info'
+    });
+    
+    // Morning vs Evening
+    const morningOrders = data.slice(6, 12).reduce((sum, h) => sum + h.avg_orders, 0);
+    const eveningOrders = data.slice(17, 22).reduce((sum, h) => sum + h.avg_orders, 0);
+    
+    if (morningOrders > eveningOrders) {
+        insights.push({
+            icon: 'fas fa-sun',
+            text: 'ช่วงเช้าและกลางวันมีออเดอร์มากกว่าช่วงเย็น ควรเตรียมพนักงานและวัตถุดิบให้เพียงพอ',
+            type: 'success'
+        });
+    } else {
+        insights.push({
+            icon: 'fas fa-moon',
+            text: 'ช่วงเย็นมีออเดอร์มากกว่าช่วงเช้า ควรปรับแผนการทำงานให้เหมาะสม',
+            type: 'warning'
+        });
+    }
+    
+    // Low activity periods
+    const lowHours = data.filter(h => h.avg_orders < 1).map(h => h.hour);
+    if (lowHours.length > 0) {
+        insights.push({
+            icon: 'fas fa-chart-line',
+            text: `ช่วงเวลา ${lowHours.join(', ')} มีออเดอร์น้อย สามารถใช้เวลานี้ในการเตรียมงานหรือปรับปรุงอุปกรณ์`,
+            type: 'info'
+        });
+    }
+    
+    const container = document.getElementById('insights');
+    container.innerHTML = insights.map(insight => `
+        <div class="flex items-start p-4 rounded-lg ${getInsightClass(insight.type)}">
+            <i class="${insight.icon} text-lg mr-3 mt-1"></i>
+            <p class="text-gray-700">${insight.text}</p>
+        </div>
+    `).join('');
+}
+
+function getInsightClass(type) {
+    switch (type) {
+        case 'success': return 'bg-green-50 border border-green-200';
+        case 'warning': return 'bg-yellow-50 border border-yellow-200';
+        case 'error': return 'bg-red-50 border border-red-200';
+        default: return 'bg-blue-50 border border-blue-200';
+    }
+}
+
+function showLoading() {
+    document.getElementById('peak-hour-time').textContent = '...';
+    document.getElementById('busiest-period').textContent = '...';
+    document.getElementById('quietest-hour').textContent = '...';
+}
+
+function showError(message) {
+    alert(message);
+}
+
+function refreshData() {
+    updateAnalysis();
+}
+
+// Load initial data
+document.addEventListener('DOMContentLoaded', updateAnalysis);
+</script>
+{% endblock %}

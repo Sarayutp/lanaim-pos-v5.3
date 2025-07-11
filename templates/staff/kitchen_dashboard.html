@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block title %}ลานอิ่ม - ครัว{% endblock %}
+
+{% block navbar %}
+<nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+            <!-- Logo and User Info -->
+            <div class="flex items-center">
+                <i class="fas fa-utensils text-lanaim-primary text-xl mr-2"></i>
+                <span class="text-xl font-bold text-lanaim-primary">ลานอิ่ม</span>
+                <span class="ml-4 text-gray-600">ครัว</span>
+            </div>
+            
+            <!-- User Menu -->
+            <div class="flex items-center space-x-4">
+                <span class="text-gray-700">สวัสดี, {{ current_user.username }}</span>
+                <a href="{{ url_for('staff.logout') }}" 
+                   class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="fas fa-sign-out-alt mr-1"></i>ออกจากระบบ
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- Header with Stats -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-4">แดชบอร์ดครัว</h1>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                <div class="flex items-center">
+                    <div class="p-3 bg-red-100 rounded-lg">
+                        <i class="fas fa-clock text-red-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-red-600">ออเดอร์ใหม่</p>
+                        <p class="text-2xl font-bold text-red-700">{{ pending_orders|length }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                <div class="flex items-center">
+                    <div class="p-3 bg-yellow-100 rounded-lg">
+                        <i class="fas fa-utensils text-yellow-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-yellow-600">กำลังเตรียม</p>
+                        <p class="text-2xl font-bold text-yellow-700">{{ preparing_orders|length }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                <div class="flex items-center">
+                    <div class="p-3 bg-green-100 rounded-lg">
+                        <i class="fas fa-check text-green-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-green-600">พร้อมส่ง</p>
+                        <p class="text-2xl font-bold text-green-700">{{ ready_orders|length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Order Tabs -->
+    <div class="mb-6">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8">
+                <button onclick="showTab('pending')" 
+                        class="order-tab active border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                    ออเดอร์ใหม่ 
+                    {% if pending_orders %}
+                    <span class="bg-red-100 text-red-800 ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                        {{ pending_orders|length }}
+                    </span>
+                    {% endif %}
+                </button>
+                
+                <button onclick="showTab('preparing')" 
+                        class="order-tab border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                    กำลังเตรียม
+                    {% if preparing_orders %}
+                    <span class="bg-yellow-100 text-yellow-800 ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                        {{ preparing_orders|length }}
+                    </span>
+                    {% endif %}
+                </button>
+                
+                <button onclick="showTab('ready')" 
+                        class="order-tab border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                    พร้อมส่ง
+                    {% if ready_orders %}
+                    <span class="bg-green-100 text-green-800 ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                        {{ ready_orders|length }}
+                    </span>
+                    {% endif %}
+                </button>
+            </nav>
+        </div>
+    </div>
+    
+    <!-- Pending Orders -->
+    <div id="pending-tab" class="order-tab-content">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">ออเดอร์ใหม่</h2>
+        
+        {% if pending_orders %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {% for order in pending_orders %}
+            <div class="bg-white border-l-4 border-red-500 rounded-lg shadow-sm p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">{{ order.order_number }}</h3>
+                        <p class="text-sm text-gray-600">{{ order.created_at.strftime('%H:%M น.') }}</p>
+                        <p class="text-sm text-gray-600">{{ order.customer_name }}</p>
+                    </div>
+                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+                        ใหม่
+                    </span>
+                </div>
+                
+                <!-- Order Items -->
+                <div class="space-y-2 mb-4">
+                    {% for item in order.items %}
+                    <div class="text-sm">
+                        <span class="font-medium">{{ item.menu_name }} x{{ item.quantity }}</span>
+                        {% if item.options %}
+                        <div class="text-gray-600 text-xs ml-2">
+                            {% for option in item.options %}
+                            • {{ option.option_name }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if item.special_requests %}
+                        <div class="text-orange-600 text-xs ml-2">
+                            <i class="fas fa-sticky-note mr-1"></i>{{ item.special_requests }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex space-x-2">
+                    <button onclick="updateOrderStatus({{ order.id }}, 'preparing')" 
+                            class="flex-1 bg-lanaim-primary text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors text-sm">
+                        รับออเดอร์
+                    </button>
+                    <button onclick="printOrder({{ order.id }})" 
+                            class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                        <i class="fas fa-print"></i>
+                    </button>
+                    <a href="{{ url_for('staff.order_details', order_id=order.id) }}" 
+                       class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500">ไม่มีออเดอร์ใหม่</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Preparing Orders -->
+    <div id="preparing-tab" class="order-tab-content hidden">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">กำลังเตรียม</h2>
+        
+        {% if preparing_orders %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {% for order in preparing_orders %}
+            <div class="bg-white border-l-4 border-yellow-500 rounded-lg shadow-sm p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">{{ order.order_number }}</h3>
+                        <p class="text-sm text-gray-600">{{ order.created_at.strftime('%H:%M น.') }}</p>
+                        <p class="text-sm text-gray-600">{{ order.customer_name }}</p>
+                    </div>
+                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+                        กำลังเตรียม
+                    </span>
+                </div>
+                
+                <!-- Order Items -->
+                <div class="space-y-2 mb-4">
+                    {% for item in order.items %}
+                    <div class="text-sm">
+                        <span class="font-medium">{{ item.menu_name }} x{{ item.quantity }}</span>
+                        {% if item.options %}
+                        <div class="text-gray-600 text-xs ml-2">
+                            {% for option in item.options %}
+                            • {{ option.option_name }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if item.special_requests %}
+                        <div class="text-orange-600 text-xs ml-2">
+                            <i class="fas fa-sticky-note mr-1"></i>{{ item.special_requests }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex space-x-2">
+                    <button onclick="updateOrderStatus({{ order.id }}, 'ready')" 
+                            class="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm">
+                        พร้อมส่ง
+                    </button>
+                    <button onclick="printOrder({{ order.id }})" 
+                            class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                        <i class="fas fa-print"></i>
+                    </button>
+                    <a href="{{ url_for('staff.order_details', order_id=order.id) }}" 
+                       class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-utensils text-4xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500">ไม่มีออเดอร์ที่กำลังเตรียม</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Ready Orders -->
+    <div id="ready-tab" class="order-tab-content hidden">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">พร้อมส่ง</h2>
+        
+        {% if ready_orders %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {% for order in ready_orders %}
+            <div class="bg-white border-l-4 border-green-500 rounded-lg shadow-sm p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">{{ order.order_number }}</h3>
+                        <p class="text-sm text-gray-600">{{ order.created_at.strftime('%H:%M น.') }}</p>
+                        <p class="text-sm text-gray-600">{{ order.customer_name }}</p>
+                    </div>
+                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                        พร้อมส่ง
+                    </span>
+                </div>
+                
+                <!-- Order Items -->
+                <div class="space-y-2 mb-4">
+                    {% for item in order.items %}
+                    <div class="text-sm">
+                        <span class="font-medium">{{ item.menu_name }} x{{ item.quantity }}</span>
+                        {% if item.options %}
+                        <div class="text-gray-600 text-xs ml-2">
+                            {% for option in item.options %}
+                            • {{ option.option_name }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if item.special_requests %}
+                        <div class="text-orange-600 text-xs ml-2">
+                            <i class="fas fa-sticky-note mr-1"></i>{{ item.special_requests }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Info -->
+                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p class="text-sm text-green-700">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        รอพนักงานส่งมารับ
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-check text-4xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500">ไม่มีออเดอร์พร้อมส่ง</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tab switching
+    function showTab(tabName) {
+        // Hide all tab contents
+        document.querySelectorAll('.order-tab-content').forEach(tab => {
+            tab.classList.add('hidden');
+        });
+        
+        // Show selected tab
+        document.getElementById(tabName + '-tab').classList.remove('hidden');
+        
+        // Update tab buttons
+        document.querySelectorAll('.order-tab').forEach(button => {
+            button.classList.remove('active', 'border-lanaim-primary', 'text-lanaim-primary');
+            button.classList.add('border-transparent', 'text-gray-500');
+        });
+        
+        event.target.classList.add('active', 'border-lanaim-primary', 'text-lanaim-primary');
+        event.target.classList.remove('border-transparent', 'text-gray-500');
+    }
+    
+    // Update order status
+    async function updateOrderStatus(orderId, newStatus) {
+        const statusNames = {
+            'accepted': 'รับออเดอร์',
+            'preparing': 'เริ่มเตรียม',
+            'ready': 'พร้อมส่ง'
+        };
+        
+        if (!confirm(`ต้องการ${statusNames[newStatus]}หรือไม่?`)) {
+            return;
+        }
+        
+        try {
+            const response = await LanAim.api.call(`/api/order/${orderId}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    status: newStatus
+                })
+            });
+            
+            LanAim.showToast(response.message, 'success');
+            
+            // Reload page to update order lists
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error updating order status:', error);
+        }
+    }
+    
+    // Print order (placeholder)
+    function printOrder(orderId) {
+        LanAim.showToast('ฟีเจอร์พิมพ์ใบสั่งจะพัฒนาในเฟสถัดไป', 'info');
+        // TODO: Implement actual printing functionality
+    }
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        window.location.reload();
+    }, 30000);
+    
+    // Initialize first tab as active
+    document.addEventListener('DOMContentLoaded', function() {
+        const firstTab = document.querySelector('.order-tab.active');
+        if (firstTab) {
+            firstTab.classList.add('border-lanaim-primary', 'text-lanaim-primary');
+            firstTab.classList.remove('border-transparent', 'text-gray-500');
+        }
+    });
+    
+    // Play notification sound for new orders (placeholder)
+    // In real implementation, this would be triggered by WebSocket
+    function playNewOrderSound() {
+        // Create a simple beep sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'square';
+        
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,415 @@
+{% extends "admin/base.html" %}
+{% block title %}จัดการวัตถุดิบ{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">จัดการวัตถุดิบ</h1>
+        <button onclick="openCreateIngredientModal()" class="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:from-green-700 hover:to-blue-700 transition-all duration-200 shadow-lg">
+            <i class="fas fa-plus mr-2"></i>เพิ่มวัตถุดิบใหม่
+        </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-leaf"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">วัตถุดิบทั้งหมด</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_ingredients }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ใกล้หมด</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ low_stock_count }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-red-100 text-red-600">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">หมดสต็อก</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ out_of_stock_count }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">มูลค่ารวม</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_value }}฿</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex flex-wrap gap-4 items-center">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">หน่วยนับ</label>
+                <select id="unitFilter" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">ทั้งหมด</option>
+                    {% for unit in units %}
+                    <option value="{{ unit }}">{{ unit }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">สถานะสต็อก</label>
+                <select id="stockFilter" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">ทั้งหมด</option>
+                    <option value="in_stock">มีสต็อก</option>
+                    <option value="low_stock">ใกล้หมด</option>
+                    <option value="out_of_stock">หมดสต็อก</option>
+                </select>
+            </div>
+            
+            <div class="flex-grow">
+                <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหา</label>
+                <input type="text" id="searchInput" placeholder="ค้นหาชื่อวัตถุดิบ..." class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+        </div>
+    </div>
+
+    <!-- Ingredient List -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วัตถุดิบ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวนคงเหลือ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ขั้นต่ำ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ราคาต่อหน่วย</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">มูลค่า</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for ingredient in ingredients %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">{{ ingredient.name }}</div>
+                                <div class="text-sm text-gray-500">{{ ingredient.unit }}</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ "{:,.2f}".format(ingredient.stock_quantity|float) }} {{ ingredient.unit }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ "{:,.2f}".format(ingredient.low_stock_threshold|float) }} {{ ingredient.unit }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ "{:,.2f}".format(ingredient.cost_per_unit|float) }}฿
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                            {{ "{:,.2f}".format((ingredient.stock_quantity|float) * (ingredient.cost_per_unit|float)) }}฿
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if ingredient.stock_quantity <= 0 %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <i class="fas fa-times-circle mr-1"></i>หมดสต็อก
+                            </span>
+                            {% elif ingredient.stock_quantity <= ingredient.low_stock_threshold %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>ใกล้หมด
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1"></i>พร้อมใช้
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <button onclick="adjustStock({{ ingredient.id }})" class="text-indigo-600 hover:text-indigo-900">
+                                <i class="fas fa-plus-minus"></i> ปรับสต็อก
+                            </button>
+                            <button onclick="editIngredient({{ ingredient.id }})" class="text-blue-600 hover:text-blue-900">
+                                <i class="fas fa-edit"></i> แก้ไข
+                            </button>
+                            <button onclick="deleteIngredient({{ ingredient.id }})" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash"></i> ลบ
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Ingredient Modal -->
+<div id="ingredientModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-medium text-gray-900" id="ingredientModalTitle">เพิ่มวัตถุดิบใหม่</h3>
+                <button onclick="closeIngredientModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="ingredientForm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อวัตถุดิบ</label>
+                        <input type="text" id="ingredientName" name="name" required class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">หน่วยนับ</label>
+                        <input type="text" id="ingredientUnit" name="unit" required placeholder="เช่น กิโลกรัม, ลิตร, ชิ้น" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนปัจจุบัน</label>
+                        <input type="number" id="ingredientCurrentStock" name="current_stock" step="0.01" required class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนขั้นต่ำ</label>
+                        <input type="number" id="ingredientMinimumStock" name="minimum_stock" step="0.01" required class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ราคาต่อหน่วย (บาท)</label>
+                        <input type="number" id="ingredientUnitCost" name="unit_cost" step="0.01" required class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button type="button" onclick="closeIngredientModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+                        บันทึก
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Adjustment Modal -->
+<div id="stockModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-medium text-gray-900">ปรับปรุงสต็อก</h3>
+                <button onclick="closeStockModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="stockForm">
+                <input type="hidden" id="stockIngredientId" name="ingredient_id">
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">วัตถุดิบ</label>
+                        <input type="text" id="stockIngredientName" readonly class="w-full border-gray-300 rounded-md shadow-sm bg-gray-50">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนปัจจุบัน</label>
+                        <input type="text" id="stockCurrentAmount" readonly class="w-full border-gray-300 rounded-md shadow-sm bg-gray-50">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทการปรับปรุง</label>
+                        <select id="stockAdjustmentType" name="adjustment_type" required class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="add">เพิ่ม (รับสินค้า)</option>
+                            <option value="remove">ลด (ใช้งาน/เสียหาย)</option>
+                            <option value="set">กำหนดใหม่ (นับสต็อก)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">จำนวน</label>
+                        <input type="number" id="stockQuantity" name="quantity" step="0.01" required class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">หมายเหตุ</label>
+                        <textarea id="stockReason" name="reason" rows="3" placeholder="เหตุผลการปรับปรุงสต็อก" class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button type="button" onclick="closeStockModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+                        ปรับปรุงสต็อก
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Ingredient management functions
+function openCreateIngredientModal() {
+    document.getElementById('ingredientModalTitle').textContent = 'เพิ่มวัตถุดิบใหม่';
+    document.getElementById('ingredientForm').reset();
+    document.getElementById('ingredientModal').classList.remove('hidden');
+}
+
+function closeIngredientModal() {
+    document.getElementById('ingredientModal').classList.add('hidden');
+}
+
+function editIngredient(ingredientId) {
+    fetch(`/admin/api/ingredient/${ingredientId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('ingredientModalTitle').textContent = 'แก้ไขวัตถุดิบ';
+                document.getElementById('ingredientName').value = data.ingredient.name;
+                document.getElementById('ingredientUnit').value = data.ingredient.unit;
+                document.getElementById('ingredientCurrentStock').value = data.ingredient.current_stock;
+                document.getElementById('ingredientMinimumStock').value = data.ingredient.minimum_stock;
+                document.getElementById('ingredientUnitCost').value = data.ingredient.unit_cost;
+                document.getElementById('ingredientModal').classList.remove('hidden');
+            }
+        });
+}
+
+function deleteIngredient(ingredientId) {
+    if (confirm('คุณต้องการลบวัตถุดิบนี้หรือไม่? การดำเนินการนี้ไม่สามารถยกเลิกได้')) {
+        fetch(`/admin/api/ingredient/${ingredientId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + data.message);
+            }
+        });
+    }
+}
+
+function adjustStock(ingredientId) {
+    fetch(`/admin/api/ingredient/${ingredientId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('stockIngredientId').value = ingredientId;
+                document.getElementById('stockIngredientName').value = data.ingredient.name;
+                document.getElementById('stockCurrentAmount').value = data.ingredient.current_stock + ' ' + data.ingredient.unit;
+                document.getElementById('stockModal').classList.remove('hidden');
+            }
+        });
+}
+
+function closeStockModal() {
+    document.getElementById('stockModal').classList.add('hidden');
+}
+
+// Form submissions
+document.getElementById('ingredientForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('/admin/api/ingredient', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + data.message);
+        }
+    });
+});
+
+document.getElementById('stockForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('/admin/api/stock/adjust', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + data.message);
+        }
+    });
+});
+
+// Filters
+document.getElementById('unitFilter').addEventListener('change', filterIngredients);
+document.getElementById('stockFilter').addEventListener('change', filterIngredients);
+document.getElementById('searchInput').addEventListener('input', filterIngredients);
+
+function filterIngredients() {
+    const unit = document.getElementById('unitFilter').value;
+    const stockStatus = document.getElementById('stockFilter').value;
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    
+    const rows = document.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const ingredientUnit = row.querySelector('td:nth-child(1) div:nth-child(2)').textContent.trim();
+        const ingredientName = row.querySelector('td:nth-child(1) div:nth-child(1)').textContent.toLowerCase();
+        const statusElement = row.querySelector('td:nth-child(6) span');
+        
+        let ingredientStockStatus = '';
+        if (statusElement.textContent.includes('หมดสต็อก')) {
+            ingredientStockStatus = 'out_of_stock';
+        } else if (statusElement.textContent.includes('ใกล้หมด')) {
+            ingredientStockStatus = 'low_stock';
+        } else {
+            ingredientStockStatus = 'in_stock';
+        }
+        
+        const unitMatch = !unit || ingredientUnit === unit;
+        const stockMatch = !stockStatus || ingredientStockStatus === stockStatus;
+        const searchMatch = !search || ingredientName.includes(search);
+        
+        if (unitMatch && stockMatch && searchMatch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

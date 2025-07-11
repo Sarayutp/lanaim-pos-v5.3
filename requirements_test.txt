@@ -1,0 +1,104 @@
+# Testing Dependencies for LanAim POS v5.3
+# Install with: pip install -r requirements_test.txt
+
+# Core testing framework
+pytest==7.4.3
+pytest-flask==1.3.0
+pytest-cov==4.1.0
+pytest-html==4.1.1
+pytest-xdist==3.3.1
+pytest-timeout==2.2.0
+pytest-mock==3.12.0
+pytest-benchmark==4.0.0
+
+# Coverage reporting
+coverage==7.3.2
+coverage-badge==1.1.0
+
+# Database testing
+pytest-postgresql==5.0.0
+pytest-redis==3.0.2
+
+# Web testing
+selenium==4.15.2
+pytest-selenium==4.1.0
+webdriver-manager==4.0.1
+
+# API testing
+requests==2.31.0
+responses==0.23.3
+
+# Mock and fixtures
+factory-boy==3.3.0
+faker==20.1.0
+freezegun==1.2.2
+
+# Performance testing
+pytest-benchmark==4.0.0
+memory-profiler==0.61.0
+psutil==5.9.6
+
+# Security testing
+bandit==1.7.5
+safety==2.3.5
+
+# Code quality
+flake8==6.1.0
+black==23.11.0
+isort==5.12.0
+mypy==1.7.1
+
+# Documentation testing
+pytest-doctestplus==1.0.0
+
+# Parallel testing
+pytest-xdist==3.3.1
+pytest-parallel==0.1.1
+
+# Reporting
+allure-pytest==2.13.2
+pytest-json-report==1.5.0
+
+# Test utilities
+testfixtures==7.2.2
+dirty-equals==0.7.1
+syrupy==4.6.0
+
+# Environment management
+python-dotenv==1.0.0
+pytest-env==1.1.3
+
+# Database migrations testing
+alembic==1.12.1
+
+# File handling for tests (using available versions)
+tempfile2==0.1.2
+
+# Date/time testing
+freezegun==1.2.2
+arrow==1.3.0
+
+# Email testing
+pytest-email==0.2.0
+
+# Logging testing
+pytest-logging==2016.11.4
+
+# Configuration testing
+configparser==6.0.0
+
+# Image processing testing (if needed)
+Pillow==10.1.0
+
+# Network testing
+pytest-httpserver==1.0.8
+requests-mock==1.11.0
+
+# Async testing (if needed)
+pytest-asyncio==0.21.1
+
+# Load testing
+locust==2.17.0
+
+# Test data generation
+mimesis==12.1.0

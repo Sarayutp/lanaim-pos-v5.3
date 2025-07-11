@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}ลานอิ่ม - ตะกร้าสินค้า{% endblock %}
+
+{% block navbar %}
+<nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+            <!-- Back to menu -->
+            <a href="{{ url_for('customer.menu') }}" class="flex items-center text-gray-600 hover:text-lanaim-primary transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i>
+                <span>กลับไปเมนู</span>
+            </a>
+            
+            <!-- Logo -->
+            <div class="flex items-center">
+                <i class="fas fa-utensils text-lanaim-primary text-xl mr-2"></i>
+                <span class="text-xl font-bold text-lanaim-primary">ลานอิ่ม</span>
+            </div>
+            
+            <!-- Cart icon -->
+            <div class="flex items-center">
+                <i class="fas fa-shopping-cart text-lanaim-primary text-xl"></i>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    {% if cart_items %}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Cart Items -->
+        <div class="lg:col-span-2">
+            <h1 class="text-2xl font-bold text-gray-900 mb-6">ตะกร้าสินค้า</h1>
+            
+            <div class="space-y-4" id="cart-items-container">
+                {% for item in cart_items %}
+                <div class="cart-item bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-item-id="{{ item.id }}">
+                    <div class="flex items-start space-x-4">
+                        
+                        <!-- Item Details -->
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ item.menu_name }}</h3>
+                            
+                            <!-- Options -->
+                            {% if item.options %}
+                            <div class="mb-2">
+                                {% for option in item.options %}
+                                <span class="inline-block bg-gray-100 text-gray-700 text-sm px-2 py-1 rounded mr-2 mb-1">
+                                    {{ option.name }} {% if option.price > 0 %}(+฿{{ "%.0f"|format(option.price) }}){% endif %}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Special Requests -->
+                            {% if item.special_requests %}
+                            <p class="text-sm text-gray-600 mb-2">
+                                <i class="fas fa-sticky-note mr-1"></i>{{ item.special_requests }}
+                            </p>
+                            {% endif %}
+                            
+                            <!-- Price -->
+                            <p class="text-lg font-semibold text-lanaim-primary">
+                                ฿{{ "%.2f"|format(item.total_price) }}
+                            </p>
+                        </div>
+                        
+                        <!-- Quantity Controls -->
+                        <div class="flex items-center space-x-3">
+                            <button onclick="updateCartItemQuantity('{{ item.id }}', {{ item.quantity - 1 }})" 
+                                    class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors">
+                                <i class="fas fa-minus text-sm"></i>
+                            </button>
+                            
+                            <span class="text-lg font-semibold w-8 text-center">{{ item.quantity }}</span>
+                            
+                            <button onclick="updateCartItemQuantity('{{ item.id }}', {{ item.quantity + 1 }})" 
+                                    class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors">
+                                <i class="fas fa-plus text-sm"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Remove Button -->
+                        <button onclick="removeCartItem('{{ item.id }}')" 
+                                class="text-red-500 hover:text-red-700 transition-colors p-2">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Order Summary -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-24">
+                <h2 class="text-xl font-semibold text-gray-900 mb-6">สรุปคำสั่งซื้อ</h2>
+                
+                <!-- Zone Selection -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">โต๊ะ/โซนจัดส่ง</label>
+                    {% if selected_zone %}
+                    <div class="p-3 bg-lanaim-accent bg-opacity-20 border border-lanaim-primary rounded-lg">
+                        <p class="font-medium text-lanaim-primary">{{ selected_zone.name }}</p>
+                        <p class="text-sm text-gray-600">{{ selected_zone.description }}</p>
+                    </div>
+                    {% else %}
+                    <select id="zone-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lanaim-primary focus:border-transparent">
+                        <option value="">เลือกโต๊ะ/โซน</option>
+                        {% for zone in zones %}
+                        <option value="{{ zone.id }}">{{ zone.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                </div>
+                
+                <!-- Customer Information -->
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label for="customer-name" class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้รับ *</label>
+                        <input type="text" id="customer-name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lanaim-primary focus:border-transparent"
+                               placeholder="กรอกชื่อของคุณ">
+                    </div>
+                    
+                    <div>
+                        <label for="customer-phone" class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ *</label>
+                        <input type="tel" id="customer-phone" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lanaim-primary focus:border-transparent"
+                               placeholder="08XXXXXXXX">
+                    </div>
+                    
+                    <div>
+                        <label for="delivery-address" class="block text-sm font-medium text-gray-700 mb-1">รายละเอียดที่อยู่จัดส่ง *</label>
+                        <textarea id="delivery-address" rows="3" required
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lanaim-primary focus:border-transparent"
+                                  placeholder="เช่น เต็นท์สีแดง ข้างห้องน้ำ"></textarea>
+                    </div>
+                </div>
+                
+                <!-- Payment Method -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">วิธีการชำระเงิน</label>
+                    <div class="space-y-3">
+                        <label class="flex items-center">
+                            <input type="radio" name="payment-method" value="COD" checked
+                                   class="mr-3 text-lanaim-primary focus:ring-lanaim-primary">
+                            <div>
+                                <p class="font-medium">ชำระเงินสดปลายทาง (COD)</p>
+                                <p class="text-sm text-gray-600">ชำระเงินเมื่อได้รับอาหาร</p>
+                            </div>
+                        </label>
+                        
+                        <label class="flex items-center">
+                            <input type="radio" name="payment-method" value="TOD"
+                                   class="mr-3 text-lanaim-primary focus:ring-lanaim-primary">
+                            <div>
+                                <p class="font-medium">โอนจ่ายเมื่อรับของ (TOD)</p>
+                                <p class="text-sm text-gray-600">โอนเงินเมื่อได้รับอาหาร</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Price Summary -->
+                <div class="border-t border-gray-200 pt-4 mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-600">รวมสินค้า</span>
+                        <span id="subtotal">฿{{ "%.2f"|format(cart_total) }}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-600">ค่าจัดส่ง</span>
+                        <span>฿0.00</span>
+                    </div>
+                    
+                    <div class="border-t border-gray-200 pt-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-semibold text-gray-900">ยอดรวมสุทธิ</span>
+                            <span id="total-amount" class="text-xl font-bold text-lanaim-primary">฿{{ "%.2f"|format(cart_total) }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Order Button -->
+                <button onclick="submitOrder()" 
+                        class="w-full bg-lanaim-primary text-white py-4 rounded-lg text-lg font-semibold hover:bg-opacity-90 transition-colors">
+                    <i class="fas fa-check mr-2"></i>ยืนยันการสั่งซื้อ
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- Empty Cart -->
+    <div class="text-center py-16">
+        <div class="max-w-md mx-auto">
+            <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-6"></i>
+            <h1 class="text-2xl font-semibold text-gray-900 mb-4">ตะกร้าสินค้าว่างเปล่า</h1>
+            <p class="text-gray-600 mb-8">เพิ่มอาหารลงตะกร้าเพื่อเริ่มสั่งอาหาร</p>
+            <a href="{{ url_for('customer.menu') }}" 
+               class="inline-block bg-lanaim-primary text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-opacity-90 transition-colors">
+                <i class="fas fa-utensils mr-2"></i>ดูเมนูอาหาร
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Update cart item quantity
+    async function updateCartItemQuantity(itemId, newQuantity) {
+        try {
+            await LanAim.api.call('/api/cart/update', {
+                method: 'POST',
+                body: JSON.stringify({
+                    cart_item_id: itemId,
+                    quantity: newQuantity
+                })
+            });
+            
+            // Reload page to update cart
+            window.location.reload();
+            
+        } catch (error) {
+            console.error('Error updating cart:', error);
+        }
+    }
+    
+    // Remove cart item
+    async function removeCartItem(itemId) {
+        if (!confirm('ต้องการลบสินค้านี้ออกจากตะกร้าหรือไม่?')) {
+            return;
+        }
+        
+        try {
+            await LanAim.api.call('/api/cart/remove', {
+                method: 'POST',
+                body: JSON.stringify({
+                    cart_item_id: itemId
+                })
+            });
+            
+            // Reload page to update cart
+            window.location.reload();
+            
+        } catch (error) {
+            console.error('Error removing item:', error);
+        }
+    }
+    
+    // Submit order
+    async function submitOrder() {
+        // Validate required fields
+        const customerName = document.getElementById('customer-name').value.trim();
+        const customerPhone = document.getElementById('customer-phone').value.trim();
+        const deliveryAddress = document.getElementById('delivery-address').value.trim();
+        const paymentMethod = document.querySelector('input[name="payment-method"]:checked').value;
+        
+        // Get zone ID
+        let zoneId = null;
+        const zoneSelect = document.getElementById('zone-select');
+        if (zoneSelect) {
+            zoneId = zoneSelect.value || null;
+        } else {
+            // Zone is pre-selected
+            zoneId = {{ selected_zone.id if selected_zone else 'null' }};
+        }
+        
+        // Validation
+        if (!customerName) {
+            LanAim.showToast('กรุณากรอกชื่อผู้รับ', 'error');
+            document.getElementById('customer-name').focus();
+            return;
+        }
+        
+        if (!customerPhone) {
+            LanAim.showToast('กรุณากรอกเบอร์โทรศัพท์', 'error');
+            document.getElementById('customer-phone').focus();
+            return;
+        }
+        
+        if (!/^[0-9]{9,10}$/.test(customerPhone)) {
+            LanAim.showToast('เบอร์โทรศัพท์ไม่ถูกต้อง', 'error');
+            document.getElementById('customer-phone').focus();
+            return;
+        }
+        
+        if (!deliveryAddress) {
+            LanAim.showToast('กรุณากรอกรายละเอียดที่อยู่จัดส่ง', 'error');
+            document.getElementById('delivery-address').focus();
+            return;
+        }
+        
+        try {
+            const response = await LanAim.api.call('/api/order', {
+                method: 'POST',
+                body: JSON.stringify({
+                    customer_name: customerName,
+                    customer_phone: customerPhone,
+                    delivery_address: deliveryAddress,
+                    delivery_zone_id: zoneId,
+                    payment_method: paymentMethod
+                })
+            });
+            
+            // Save order number for tracking
+            localStorage.setItem('currentOrderNumber', response.order_number);
+            
+            // Show success message and redirect
+            LanAim.showToast(response.message, 'success');
+            
+            setTimeout(() => {
+                window.location.href = `/order/${response.order_number}`;
+            }, 1500);
+            
+        } catch (error) {
+            console.error('Error submitting order:', error);
+        }
+    }
+    
+    // Auto-format phone number
+    document.getElementById('customer-phone').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 10) {
+            value = value.substring(0, 10);
+        }
+        e.target.value = value;
+    });
+</script>
+{% endblock %}

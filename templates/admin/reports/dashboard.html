@@ -1,0 +1,217 @@
+{% extends "admin/base.html" %}
+{% block title %}รายงานและสถิติ{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-teal-600 to-blue-600 px-6 py-8 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">รายงานและสถิติ</h1>
+                    <p class="mt-2 text-teal-100">ภาพรวมการดำเนินงานและรายงานธุรกิจ</p>
+                </div>
+                <div>
+                    <button onclick="exportReports()" 
+                            class="bg-white bg-opacity-20 hover:bg-opacity-30 px-6 py-3 rounded-lg transition-colors inline-flex items-center">
+                        <i class="fas fa-download mr-2"></i>
+                        ส่งออกรายงาน
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-dollar-sign text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ยอดขายวันนี้</p>
+                    <p class="text-2xl font-bold text-gray-900">฿12,450</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i class="fas fa-shopping-cart text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">คำสั่งซื้อวันนี้</p>
+                    <p class="text-2xl font-bold text-gray-900">89</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-star text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">คะแนนเฉลี่ย</p>
+                    <p class="text-2xl font-bold text-gray-900">4.6</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ลูกค้าใหม่</p>
+                    <p class="text-2xl font-bold text-gray-900">23</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Categories -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Sales Reports -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                    <i class="fas fa-chart-line text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">รายงานยอดขาย</h3>
+            </div>
+            <p class="text-gray-600 mb-4">รายงานการขาย รายได้ และการเติบโต</p>
+            <div class="space-y-2">
+                <a href="{{ url_for('admin.sales_report') }}" 
+                   class="block w-full px-4 py-2 text-left text-green-600 hover:bg-green-50 rounded-lg">
+                    <i class="fas fa-chart-bar mr-2"></i>รายงานยอดขายรายวัน
+                </a>
+                <a href="{{ url_for('admin.sales_report') }}?period=weekly" 
+                   class="block w-full px-4 py-2 text-left text-green-600 hover:bg-green-50 rounded-lg">
+                    <i class="fas fa-chart-area mr-2"></i>รายงานยอดขายรายสัปดาห์
+                </a>
+                <a href="{{ url_for('admin.sales_report') }}?period=monthly" 
+                   class="block w-full px-4 py-2 text-left text-green-600 hover:bg-green-50 rounded-lg">
+                    <i class="fas fa-chart-pie mr-2"></i>รายงานยอดขายรายเดือน
+                </a>
+            </div>
+        </div>
+
+        <!-- Inventory Reports -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                    <i class="fas fa-boxes text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">รายงานสต็อก</h3>
+            </div>
+            <p class="text-gray-600 mb-4">รายงานวัตถุดิบ สต็อก และการใช้งาน</p>
+            <div class="space-y-2">
+                <a href="{{ url_for('admin.inventory_report') }}" 
+                   class="block w-full px-4 py-2 text-left text-blue-600 hover:bg-blue-50 rounded-lg">
+                    <i class="fas fa-warehouse mr-2"></i>สถานะสต็อกปัจจุบัน
+                </a>
+                <a href="{{ url_for('admin.inventory_report') }}?type=usage" 
+                   class="block w-full px-4 py-2 text-left text-blue-600 hover:bg-blue-50 rounded-lg">
+                    <i class="fas fa-chart-line mr-2"></i>การใช้วัตถุดิบ
+                </a>
+                <a href="{{ url_for('admin.inventory_report') }}?type=low_stock" 
+                   class="block w-full px-4 py-2 text-left text-blue-600 hover:bg-blue-50 rounded-lg">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>สต็อกใกล้หมด
+                </a>
+            </div>
+        </div>
+
+        <!-- Operations Reports -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                    <i class="fas fa-cogs text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">รายงานการดำเนินงาน</h3>
+            </div>
+            <p class="text-gray-600 mb-4">รายงานการให้บริการ ประสิทธิภาพ และลูกค้า</p>
+            <div class="space-y-2">
+                <a href="{{ url_for('admin.operations_report') }}" 
+                   class="block w-full px-4 py-2 text-left text-purple-600 hover:bg-purple-50 rounded-lg">
+                    <i class="fas fa-clock mr-2"></i>เวลาการให้บริการ
+                </a>
+                <a href="{{ url_for('admin.operations_report') }}?type=customer" 
+                   class="block w-full px-4 py-2 text-left text-purple-600 hover:bg-purple-50 rounded-lg">
+                    <i class="fas fa-users mr-2"></i>พฤติกรรมลูกค้า
+                </a>
+                <a href="{{ url_for('admin.operations_report') }}?type=feedback" 
+                   class="block w-full px-4 py-2 text-left text-purple-600 hover:bg-purple-50 rounded-lg">
+                    <i class="fas fa-star mr-2"></i>ความพึงพอใจลูกค้า
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Integration -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-semibold text-gray-900">การวิเคราะห์ขั้นสูง</h3>
+            <a href="{{ url_for('admin.analytics') }}" 
+               class="text-teal-600 hover:text-teal-800 font-medium">
+                ดูทั้งหมด →
+            </a>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <a href="{{ url_for('admin.peak_hours') }}" 
+               class="p-4 border border-gray-200 rounded-lg hover:border-teal-300 hover:bg-teal-50 transition-colors">
+                <div class="flex items-center">
+                    <i class="fas fa-chart-bar text-teal-600 mr-3"></i>
+                    <div>
+                        <p class="font-medium text-gray-900">ช่วงเวลาเร่งด่วน</p>
+                        <p class="text-sm text-gray-600">วิเคราะห์ Peak Hours</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{{ url_for('admin.best_sellers') }}" 
+               class="p-4 border border-gray-200 rounded-lg hover:border-teal-300 hover:bg-teal-50 transition-colors">
+                <div class="flex items-center">
+                    <i class="fas fa-trophy text-teal-600 mr-3"></i>
+                    <div>
+                        <p class="font-medium text-gray-900">เมนูขายดี</p>
+                        <p class="text-sm text-gray-600">Best Sellers Analysis</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{{ url_for('admin.feedback_analysis') }}" 
+               class="p-4 border border-gray-200 rounded-lg hover:border-teal-300 hover:bg-teal-50 transition-colors">
+                <div class="flex items-center">
+                    <i class="fas fa-comments text-teal-600 mr-3"></i>
+                    <div>
+                        <p class="font-medium text-gray-900">ความคิดเห็น</p>
+                        <p class="text-sm text-gray-600">Feedback Analysis</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{{ url_for('admin.cash_reconciliation') }}" 
+               class="p-4 border border-gray-200 rounded-lg hover:border-teal-300 hover:bg-teal-50 transition-colors">
+                <div class="flex items-center">
+                    <i class="fas fa-calculator text-teal-600 mr-3"></i>
+                    <div>
+                        <p class="font-medium text-gray-900">ปรับปรุงยอด</p>
+                        <p class="text-sm text-gray-600">Cash Reconciliation</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportReports() {
+    alert('ฟังก์ชันส่งออกรายงานกำลังพัฒนา');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+
+{% block title %}ลานอิ่ม - เมนูอาหาร{% endblock %}
+
+{% block navbar %}
+<nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+            <!-- Logo -->
+            <div class="flex items-center">
+                <a href="{{ url_for('customer.index') }}" class="flex items-center">
+                    <i class="fas fa-utensils text-lanaim-primary text-xl mr-2"></i>
+                    <span class="text-xl font-bold text-lanaim-primary">ลานอิ่ม</span>
+                </a>
+                {% if selected_zone %}
+                <span class="ml-4 px-3 py-1 bg-lanaim-accent text-lanaim-primary text-sm rounded-full">
+                    {{ selected_zone.name }}
+                </span>
+                {% endif %}
+            </div>
+            
+            <!-- Right side buttons -->
+            <div class="flex items-center space-x-4">
+                <!-- Order Status -->
+                <button id="order-status-btn" onclick="checkOrderStatus()" 
+                        class="flex items-center text-gray-600 hover:text-lanaim-primary transition-colors">
+                    <i class="fas fa-receipt mr-1"></i>
+                    <span class="hidden sm:inline">สถานะออเดอร์</span>
+                </button>
+                
+                <!-- Cart -->
+                <button onclick="window.location.href='{{ url_for('customer.cart') }}'" 
+                        class="relative flex items-center bg-lanaim-primary text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors">
+                    <i class="fas fa-shopping-cart mr-2"></i>
+                    <span class="hidden sm:inline">ตะกร้า</span>
+                    <span id="cart-badge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center
+                          {% if cart_count == 0 %}hidden{% endif %}">
+                        {{ cart_count }}
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- Header Section -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">เมนูอาหาร</h1>
+        <p class="text-gray-600">เลือกอาหารที่ต้องการและเพิ่มลงตะกร้า</p>
+    </div>
+    
+    <!-- Category Navigation -->
+    <div class="mb-8">
+        <div class="flex space-x-2 overflow-x-auto pb-2" id="category-tabs">
+            <button onclick="showCategory('all')" 
+                    class="category-tab active whitespace-nowrap px-6 py-3 rounded-lg font-medium transition-colors">
+                ทั้งหมด
+            </button>
+            {% for category in menu_categories.keys() %}
+            <button onclick="showCategory('{{ category }}')" 
+                    class="category-tab whitespace-nowrap px-6 py-3 rounded-lg font-medium transition-colors">
+                {{ category }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Menu Items Grid -->
+    {% for category, menus in menu_categories.items() %}
+    <div class="menu-category mb-12" data-category="{{ category }}">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-6">{{ category }}</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for menu in menus %}
+            <div class="menu-item bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-gray-100">
+                
+                <!-- Menu Image -->
+                <div class="h-48 bg-gray-200 relative">
+                    {% if menu.image_url %}
+                    <img src="{{ menu.image_url }}" alt="{{ menu.name }}" 
+                         class="w-full h-full object-cover">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-gray-400">
+                        <i class="fas fa-utensils text-4xl"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Price badge -->
+                    <div class="absolute top-4 right-4 bg-white px-3 py-1 rounded-full shadow-md">
+                        <span class="font-bold text-lanaim-primary">฿{{ "%.0f"|format(menu.price) }}</span>
+                    </div>
+                </div>
+                
+                <!-- Menu Details -->
+                <div class="p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ menu.name }}</h3>
+                    {% if menu.description %}
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-2">{{ menu.description }}</p>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-3">
+                        {% if menu.option_groups %}
+                        <button onclick="showCustomization({{ menu.id }})" 
+                                class="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-center">
+                            <i class="fas fa-cog mr-1"></i>ปรับแต่ง
+                        </button>
+                        {% endif %}
+                        
+                        <button onclick="{% if menu.option_groups %}showCustomization({{ menu.id }}){% else %}addToCart({{ menu.id }}, 1){% endif %}" 
+                                class="{% if menu.option_groups %}flex-1{% else %}w-full{% endif %} bg-lanaim-primary text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors text-center">
+                            <i class="fas fa-plus mr-1"></i>เพิ่มลงตะกร้า
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Menu Customization Modal -->
+<div id="customization-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center h-full p-4">
+        <div class="bg-white rounded-lg max-w-md w-full max-h-screen overflow-y-auto">
+            <div class="p-6">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h3 id="modal-title" class="text-xl font-semibold text-gray-900">ปรับแต่งเมนู</h3>
+                    <button onclick="closeCustomization()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <!-- Menu Info -->
+                <div id="modal-menu-info" class="mb-6">
+                    <!-- Menu details will be loaded here -->
+                </div>
+                
+                <!-- Option Groups -->
+                <div id="modal-options" class="space-y-6 mb-6">
+                    <!-- Options will be loaded here -->
+                </div>
+                
+                <!-- Special Requests -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">หมายเหตุพิเศษ</label>
+                    <textarea id="special-requests" rows="3" 
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lanaim-primary focus:border-transparent"
+                              placeholder="เช่น ไม่ใส่ผักชี, เพิ่มความเผ็ด..."></textarea>
+                </div>
+                
+                <!-- Quantity -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">จำนวน</label>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="updateQuantity(-1)" 
+                                class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-300 transition-colors">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <span id="quantity-display" class="text-xl font-semibold w-8 text-center">1</span>
+                        <button onclick="updateQuantity(1)" 
+                                class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-300 transition-colors">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Total Price -->
+                <div class="mb-6 text-center">
+                    <p class="text-sm text-gray-600">ราคารวม</p>
+                    <p id="total-price" class="text-2xl font-bold text-lanaim-primary">฿0</p>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex space-x-4">
+                    <button onclick="closeCustomization()" 
+                            class="flex-1 bg-gray-300 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-400 transition-colors">
+                        ยกเลิก
+                    </button>
+                    <button onclick="confirmAddToCart()" 
+                            class="flex-1 bg-lanaim-primary text-white px-4 py-3 rounded-lg hover:bg-opacity-90 transition-colors">
+                        เพิ่มลงตะกร้า
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Global variables for customization modal
+    let currentMenu = null;
+    let currentQuantity = 1;
+    
+    // Show/hide categories
+    function showCategory(category) {
+        const categories = document.querySelectorAll('.menu-category');
+        const tabs = document.querySelectorAll('.category-tab');
+        
+        // Update tab active state
+        tabs.forEach(tab => {
+            tab.classList.remove('active');
+            tab.classList.add('bg-gray-100', 'text-gray-700');
+            tab.classList.remove('bg-lanaim-primary', 'text-white');
+        });
+        
+        event.target.classList.add('active', 'bg-lanaim-primary', 'text-white');
+        event.target.classList.remove('bg-gray-100', 'text-gray-700');
+        
+        // Show/hide categories
+        categories.forEach(cat => {
+            if (category === 'all' || cat.dataset.category === category) {
+                cat.style.display = 'block';
+            } else {
+                cat.style.display = 'none';
+            }
+        });
+    }
+    
+    // Initialize category tabs
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('.category-tab');
+        tabs.forEach(tab => {
+            if (tab.classList.contains('active')) {
+                tab.classList.add('bg-lanaim-primary', 'text-white');
+            } else {
+                tab.classList.add('bg-gray-100', 'text-gray-700');
+            }
+        });
+        
+        // Check for existing order status
+        const savedOrderNumber = localStorage.getItem('currentOrderNumber');
+        if (savedOrderNumber) {
+            document.getElementById('order-status-btn').innerHTML = `
+                <i class="fas fa-receipt mr-1"></i>
+                <span class="hidden sm:inline">ออเดอร์ #${savedOrderNumber}</span>
+            `;
+        }
+    });
+    
+    // Add item to cart (simple version)
+    async function addToCart(menuId, quantity = 1) {
+        try {
+            const response = await LanAim.api.call('/api/cart/add', {
+                method: 'POST',
+                body: JSON.stringify({
+                    menu_id: menuId,
+                    quantity: quantity
+                })
+            });
+            
+            // Update cart badge
+            updateCartBadge(response.cart_count);
+            LanAim.showToast(response.message, 'success');
+            
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+        }
+    }
+    
+    // Show customization modal
+    async function showCustomization(menuId) {
+        try {
+            const response = await LanAim.api.call(`/menu/${menuId}/options`);
+            currentMenu = response.menu;
+            currentQuantity = 1;
+            
+            // Update modal content
+            document.getElementById('modal-title').textContent = `ปรับแต่ง${currentMenu.name}`;
+            
+            // Update menu info
+            document.getElementById('modal-menu-info').innerHTML = `
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-semibold text-gray-900">${currentMenu.name}</h4>
+                    <p class="text-sm text-gray-600 mt-1">${currentMenu.description || ''}</p>
+                    <p class="text-lg font-semibold text-lanaim-primary mt-2">฿${currentMenu.price}</p>
+                </div>
+            `;
+            
+            // Update options
+            const optionsContainer = document.getElementById('modal-options');
+            optionsContainer.innerHTML = '';
+            
+            response.option_groups.forEach(group => {
+                const groupDiv = document.createElement('div');
+                groupDiv.innerHTML = `
+                    <h5 class="font-medium text-gray-900 mb-3">
+                        ${group.name}
+                        ${group.is_required ? '<span class="text-red-500">*</span>' : ''}
+                    </h5>
+                    <div class="space-y-2">
+                        ${group.options.map(option => `
+                            <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <div class="flex items-center">
+                                    <input type="${group.max_selections > 1 ? 'checkbox' : 'radio'}" 
+                                           name="group_${group.id}" 
+                                           value="${option.id}"
+                                           onchange="updateTotalPrice()"
+                                           class="mr-3">
+                                    <span>${option.name}</span>
+                                </div>
+                                <span class="text-lanaim-primary font-medium">
+                                    ${option.price > 0 ? `+฿${option.price}` : 'ฟรี'}
+                                </span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                optionsContainer.appendChild(groupDiv);
+            });
+            
+            // Reset form
+            document.getElementById('special-requests').value = '';
+            document.getElementById('quantity-display').textContent = '1';
+            updateTotalPrice();
+            
+            // Show modal
+            document.getElementById('customization-modal').classList.remove('hidden');
+            
+        } catch (error) {
+            console.error('Error loading menu options:', error);
+        }
+    }
+    
+    // Close customization modal
+    function closeCustomization() {
+        document.getElementById('customization-modal').classList.add('hidden');
+        currentMenu = null;
+        currentQuantity = 1;
+    }
+    
+    // Update quantity in modal
+    function updateQuantity(change) {
+        currentQuantity = Math.max(1, currentQuantity + change);
+        document.getElementById('quantity-display').textContent = currentQuantity;
+        updateTotalPrice();
+    }
+    
+    // Update total price in modal
+    function updateTotalPrice() {
+        if (!currentMenu) return;
+        
+        let totalPrice = currentMenu.price;
+        
+        // Add selected options price
+        const selectedOptions = document.querySelectorAll('#modal-options input:checked');
+        selectedOptions.forEach(option => {
+            const optionText = option.parentElement.parentElement.querySelector('span:last-child').textContent;
+            if (optionText.includes('+฿')) {
+                const price = parseFloat(optionText.replace('+฿', ''));
+                totalPrice += price;
+            }
+        });
+        
+        totalPrice *= currentQuantity;
+        document.getElementById('total-price').textContent = LanAim.formatCurrency(totalPrice);
+    }
+    
+    // Confirm add to cart with customization
+    async function confirmAddToCart() {
+        if (!currentMenu) return;
+        
+        // Get selected options
+        const selectedOptions = [];
+        const checkedInputs = document.querySelectorAll('#modal-options input:checked');
+        checkedInputs.forEach(input => {
+            selectedOptions.push(parseInt(input.value));
+        });
+        
+        // Get special requests
+        const specialRequests = document.getElementById('special-requests').value.trim();
+        
+        try {
+            const response = await LanAim.api.call('/api/cart/add', {
+                method: 'POST',
+                body: JSON.stringify({
+                    menu_id: currentMenu.id,
+                    quantity: currentQuantity,
+                    options: selectedOptions,
+                    special_requests: specialRequests || null
+                })
+            });
+            
+            // Update cart badge
+            updateCartBadge(response.cart_count);
+            LanAim.showToast(response.message, 'success');
+            
+            // Close modal
+            closeCustomization();
+            
+        } catch (error) {
+            console.error('Error adding customized item to cart:', error);
+        }
+    }
+    
+    // Update cart badge
+    function updateCartBadge(count) {
+        const badge = document.getElementById('cart-badge');
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+    
+    // Check order status
+    function checkOrderStatus() {
+        const savedOrderNumber = localStorage.getItem('currentOrderNumber');
+        if (savedOrderNumber) {
+            window.location.href = `/order/${savedOrderNumber}`;
+        } else {
+            LanAim.showToast('ไม่พบออเดอร์ที่ดำเนินการอยู่', 'info');
+        }
+    }
+</script>
+{% endblock %}

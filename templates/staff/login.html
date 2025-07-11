@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}ลานอิ่ม - เข้าสู่ระบบพนักงาน{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-lanaim-primary text-white p-8 text-center">
+            <div class="mb-4">
+                <i class="fas fa-user-tie text-4xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold mb-2">ระบบพนักงาน</h1>
+            <p class="text-blue-100">ลานอิ่ม POS System</p>
+        </div>
+        
+        <!-- Login Form -->
+        <div class="p-8">
+            <form method="POST" class="space-y-6">
+                
+                <!-- Username -->
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-2">ชื่อผู้ใช้</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-gray-400"></i>
+                        </div>
+                        <input type="text" id="username" name="username" required
+                               class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lanaim-primary focus:border-transparent"
+                               placeholder="กรอกชื่อผู้ใช้">
+                    </div>
+                </div>
+                
+                <!-- Password -->
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">รหัสผ่าน</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-400"></i>
+                        </div>
+                        <input type="password" id="password" name="password" required
+                               class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lanaim-primary focus:border-transparent"
+                               placeholder="กรอกรหัสผ่าน">
+                        <button type="button" onclick="togglePassword()" 
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <i id="password-toggle-icon" class="fas fa-eye text-gray-400 hover:text-gray-600"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Login Button -->
+                <button type="submit" 
+                        class="w-full bg-lanaim-primary text-white py-3 px-4 rounded-lg text-lg font-semibold hover:bg-opacity-90 transition-colors">
+                    <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
+                </button>
+            </form>
+            
+            <!-- Demo Accounts Info -->
+            <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">บัญชีทดสอบ:</h3>
+                <div class="space-y-2 text-sm text-gray-600">
+                    <div class="flex justify-between">
+                        <span>พนักงานครัว:</span>
+                        <span class="font-mono">kitchen / kitchen123</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>พนักงานส่ง:</span>
+                        <span class="font-mono">delivery / delivery123</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('password-toggle-icon');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        }
+    }
+    
+    // Auto-focus username field
+    document.getElementById('username').focus();
+</script>
+{% endblock %}

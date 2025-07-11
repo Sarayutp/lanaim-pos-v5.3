@@ -1,0 +1,178 @@
+{% extends "admin/base.html" %}
+{% block title %}จัดการโปรโมชัน{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-8 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">จัดการโปรโมชัน</h1>
+                    <p class="mt-2 text-purple-100">จัดการส่วนลดและโปรโมชันพิเศษ</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.promotion_create') }}" 
+                       class="bg-white bg-opacity-20 hover:bg-opacity-30 px-6 py-3 rounded-lg transition-colors inline-flex items-center">
+                        <i class="fas fa-plus mr-2"></i>
+                        เพิ่มโปรโมชันใหม่
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promotion Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    <i class="fas fa-percentage text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">โปรโมชันทั้งหมด</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ promotions|length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-play-circle text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">กำลังดำเนินการ</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ active_promotions }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-clock text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">เตรียมเริ่ม</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ upcoming_promotions }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-red-100 text-red-600">
+                    <i class="fas fa-stop-circle text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">หมดอายุ</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ expired_promotions }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promotion List -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">รายการโปรโมชัน</h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            โปรโมชัน
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            ประเภท
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            ส่วนลด
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            ระยะเวลา
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            สถานะ
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            การดำเนินการ
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for promotion in promotions %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                    <i class="fas fa-percentage text-purple-600"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">{{ promotion.name }}</div>
+                                    {% if promotion.description %}
+                                        <div class="text-sm text-gray-500 truncate max-w-xs">{{ promotion.description }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {{ promotion.type or 'ส่วนลด' }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {% if promotion.discount_type == 'percentage' %}
+                                {{ promotion.discount_value }}%
+                            {% else %}
+                                ฿{{ promotion.discount_value }}
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div>{{ promotion.start_date.strftime('%d/%m/%Y') if promotion.start_date }}</div>
+                            <div class="text-gray-500">{{ promotion.end_date.strftime('%d/%m/%Y') if promotion.end_date }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if promotion.is_active %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    เปิดใช้งาน
+                                </span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                    ปิดใช้งาน
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <a href="{{ url_for('admin.promotion_edit', id=promotion.id) }}" 
+                               class="text-indigo-600 hover:text-indigo-900">
+                                <i class="fas fa-edit mr-1"></i>แก้ไข
+                            </a>
+                            <a href="{{ url_for('admin.promotion_usage', id=promotion.id) }}" 
+                               class="text-green-600 hover:text-green-900">
+                                <i class="fas fa-chart-line mr-1"></i>ผลการใช้
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not promotions %}
+        <div class="text-center py-12">
+            <i class="fas fa-percentage text-4xl text-gray-400 mb-4"></i>
+            <p class="text-gray-500 text-lg">ยังไม่มีโปรโมชันในระบบ</p>
+            <a href="{{ url_for('admin.promotion_create') }}" 
+               class="mt-4 inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                <i class="fas fa-plus mr-2"></i>
+                เพิ่มโปรโมชันแรก
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

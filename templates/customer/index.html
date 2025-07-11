@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}ลานอิ่ม - ยินดีต้อนรับ{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-lanaim-primary text-white p-8 text-center">
+            <div class="mb-4">
+                <i class="fas fa-utensils text-4xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold mb-2">ลานอิ่ม</h1>
+            <p class="text-blue-100">ระบบสั่งอาหารออนไลน์</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-8">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">ยินดีต้อนรับ!</h2>
+                <p class="text-gray-600 mb-6">สแกน QR Code ที่โต๊ะของคุณ หรือเลือกโซนเพื่อเริ่มสั่งอาหาร</p>
+            </div>
+            
+            <!-- QR Code Scanner (Placeholder) -->
+            <div class="mb-6">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <i class="fas fa-qrcode text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-500 mb-4">สแกน QR Code ที่โต๊ะ</p>
+                    <button onclick="showQRScanner()" class="bg-lanaim-primary text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors">
+                        <i class="fas fa-camera mr-2"></i>เปิดกล้อง
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Manual Zone Selection -->
+            <div class="mb-6">
+                <p class="text-gray-700 text-center mb-4">หรือเลือกโซนด้วยตนเอง</p>
+                <div class="space-y-2" id="zone-list">
+                    <!-- Zones will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Direct Menu Access -->
+            <div class="text-center">
+                <p class="text-gray-500 text-sm mb-4">หรือดูเมนูโดยตรง</p>
+                <a href="{{ url_for('customer.menu') }}" 
+                   class="inline-block bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="fas fa-list mr-2"></i>ดูเมนูทั้งหมด
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Scanner Modal (Placeholder) -->
+<div id="qr-scanner-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center h-full p-4">
+        <div class="bg-white rounded-lg p-6 max-w-sm w-full">
+            <div class="text-center">
+                <h3 class="text-lg font-semibold mb-4">QR Code Scanner</h3>
+                <div class="mb-4">
+                    <div class="bg-gray-100 h-64 rounded-lg flex items-center justify-center">
+                        <div class="text-center text-gray-500">
+                            <i class="fas fa-camera text-4xl mb-2"></i>
+                            <p>กล้องจะเปิดที่นี่</p>
+                            <p class="text-sm">(ฟีเจอร์นี้จะพัฒนาในเฟสถัดไป)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="closeQRScanner()" 
+                            class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                        ปิด
+                    </button>
+                    <button onclick="simulateQRScan()" 
+                            class="flex-1 bg-lanaim-primary text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors">
+                        จำลอง QR (โต๊ะ 1)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load available zones when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadZones();
+    });
+    
+    async function loadZones() {
+        try {
+            const response = await LanAim.api.call('/api/zones');
+            const zoneList = document.getElementById('zone-list');
+            
+            zoneList.innerHTML = '';
+            
+            response.zones.forEach(zone => {
+                const zoneButton = document.createElement('button');
+                zoneButton.className = 'w-full text-left bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 hover:border-lanaim-primary transition-colors';
+                zoneButton.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-medium text-gray-900">${zone.name}</h4>
+                            ${zone.description ? `<p class="text-sm text-gray-500">${zone.description}</p>` : ''}
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-400"></i>
+                    </div>
+                `;
+                zoneButton.onclick = () => selectZone(zone.id, zone.name);
+                zoneList.appendChild(zoneButton);
+            });
+            
+        } catch (error) {
+            console.error('Error loading zones:', error);
+            document.getElementById('zone-list').innerHTML = `
+                <div class="text-center text-gray-500 py-4">
+                    <i class="fas fa-exclamation-triangle mb-2"></i>
+                    <p>ไม่สามารถโหลดข้อมูลโซนได้</p>
+                </div>
+            `;
+        }
+    }
+    
+    function selectZone(zoneId, zoneName) {
+        // Store selected zone and redirect to menu
+        sessionStorage.setItem('selectedZone', JSON.stringify({
+            id: zoneId,
+            name: zoneName
+        }));
+        
+        // Show confirmation and redirect
+        LanAim.showToast(`เลือก ${zoneName} เรียบร้อยแล้ว`, 'success', 2000);
+        
+        setTimeout(() => {
+            window.location.href = `/menu/${zoneId}`;
+        }, 1000);
+    }
+    
+    function showQRScanner() {
+        document.getElementById('qr-scanner-modal').classList.remove('hidden');
+    }
+    
+    function closeQRScanner() {
+        document.getElementById('qr-scanner-modal').classList.add('hidden');
+    }
+    
+    function simulateQRScan() {
+        // Simulate scanning QR code for table 1
+        closeQRScanner();
+        selectZone(1, 'โต๊ะ 1');
+    }
+</script>
+{% endblock %}

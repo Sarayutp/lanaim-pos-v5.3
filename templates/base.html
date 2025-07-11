@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ลานอิ่ม - ระบบสั่งอาหาร{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Custom Thai font and styling -->
+    <style>
+        body {
+            font-family: 'Kanit', 'Sarabun', sans-serif;
+        }
+        
+        /* Custom color scheme for LanAim */
+        .bg-lanaim-primary { background-color: #2D5A87; }
+        .bg-lanaim-secondary { background-color: #4A90A4; }
+        .bg-lanaim-accent { background-color: #87CEEB; }
+        .text-lanaim-primary { color: #2D5A87; }
+        .text-lanaim-secondary { color: #4A90A4; }
+        
+        /* Animation for notifications */
+        .notification-enter {
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        .notification-exit {
+            animation: slideOutRight 0.3s ease-in;
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        /* Custom button styles */
+        .btn-lanaim-primary {
+            @apply bg-lanaim-primary text-white font-medium py-3 px-6 rounded-lg hover:bg-opacity-90 transition-all duration-200 transform hover:scale-105;
+        }
+        
+        .btn-lanaim-secondary {
+            @apply bg-lanaim-secondary text-white font-medium py-2 px-4 rounded-lg hover:bg-opacity-90 transition-all duration-200;
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2D5A87;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    
+    <!-- Load Thai fonts from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    
+    <!-- Navigation Bar (if needed) -->
+    {% block navbar %}{% endblock %}
+    
+    <!-- Flash Messages -->
+    <div id="flash-messages" class="fixed top-4 right-4 z-50 space-y-2">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="notification-enter max-w-sm bg-white border-l-4 
+                        {% if category == 'error' %}border-red-500 text-red-700
+                        {% elif category == 'success' %}border-green-500 text-green-700
+                        {% elif category == 'warning' %}border-yellow-500 text-yellow-700
+                        {% else %}border-blue-500 text-blue-700{% endif %}
+                        p-4 rounded-lg shadow-lg">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                {% if category == 'error' %}
+                                    <i class="fas fa-exclamation-circle text-red-500"></i>
+                                {% elif category == 'success' %}
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                {% elif category == 'warning' %}
+                                    <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle text-blue-500"></i>
+                                {% endif %}
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium">{{ message }}</p>
+                            </div>
+                            <div class="ml-auto pl-3">
+                                <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                        class="text-gray-400 hover:text-gray-600 transition-colors">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    
+    <!-- Toast notifications container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2">
+        <!-- Toast messages will be dynamically added here -->
+    </div>
+    
+    <!-- Main Content -->
+    <main class="{% block main_class %}container mx-auto px-4 py-6{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center h-full">
+            <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                <div class="spinner mx-auto mb-4"></div>
+                <p class="text-gray-700">กำลังดำเนินการ...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Core JavaScript -->
+    <script>
+        // Global utilities and functions
+        window.LanAim = {
+            // Show loading overlay
+            showLoading: function() {
+                document.getElementById('loading-overlay').classList.remove('hidden');
+            },
+            
+            // Hide loading overlay
+            hideLoading: function() {
+                document.getElementById('loading-overlay').classList.add('hidden');
+            },
+            
+            // Show toast notification
+            showToast: function(message, type = 'info', duration = 5000) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                
+                const bgColor = {
+                    'success': 'bg-green-500',
+                    'error': 'bg-red-500',
+                    'warning': 'bg-yellow-500',
+                    'info': 'bg-blue-500'
+                }[type] || 'bg-blue-500';
+                
+                toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg max-w-sm notification-enter`;
+                toast.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="flex-1">${message}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                container.appendChild(toast);
+                
+                // Auto remove after duration
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.classList.add('notification-exit');
+                        setTimeout(() => {
+                            if (toast.parentElement) {
+                                toast.remove();
+                            }
+                        }, 300);
+                    }
+                }, duration);
+            },
+            
+            // Format currency
+            formatCurrency: function(amount) {
+                return '฿' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+            },
+            
+            // Format Thai date/time
+            formatThaiDateTime: function(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleString('th-TH', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            },
+            
+            // API helper function
+            api: {
+                call: async function(url, options = {}) {
+                    const defaultOptions = {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    };
+                    
+                    const mergedOptions = { ...defaultOptions, ...options };
+                    
+                    try {
+                        LanAim.showLoading();
+                        const response = await fetch(url, mergedOptions);
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                            throw new Error(data.error || 'เกิดข้อผิดพลาด');
+                        }
+                        
+                        return data;
+                    } catch (error) {
+                        LanAim.showToast(error.message, 'error');
+                        throw error;
+                    } finally {
+                        LanAim.hideLoading();
+                    }
+                }
+            }
+        };
+        
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(() => {
+            const flashMessages = document.querySelectorAll('#flash-messages > div');
+            flashMessages.forEach(msg => {
+                msg.classList.add('notification-exit');
+                setTimeout(() => msg.remove(), 300);
+            });
+        }, 5000);
+        
+        // Confirm dialog for destructive actions
+        window.confirmAction = function(message, callback) {
+            if (confirm(message)) {
+                callback();
+            }
+        };
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

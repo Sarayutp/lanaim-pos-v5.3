@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Panel - ลานอิ่ม POS{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Thai Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        body {
+            font-family: 'Kanit', 'Sarabun', sans-serif;
+        }
+        
+        .admin-sidebar {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        }
+        
+        .admin-sidebar .nav-link {
+            transition: all 0.3s ease;
+        }
+        
+        .admin-sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .admin-sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #fbbf24;
+        }
+        
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="admin-sidebar w-64 text-white shadow-xl">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <i class="fas fa-store text-2xl mr-3"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">ลานอิ่ม POS</h1>
+                        <p class="text-sm text-blue-200">Admin Panel</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="mt-6">
+                <a href="{{ url_for('admin.dashboard') }}" 
+                   class="nav-link flex items-center px-6 py-3 text-white no-underline {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt mr-3"></i>
+                    <span>แดชบอร์ด</span>
+                </a>
+                
+                <a href="{{ url_for('admin.menu_list') }}" 
+                   class="nav-link flex items-center px-6 py-3 text-white no-underline {% if 'menu' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-utensils mr-3"></i>
+                    <span>จัดการเมนู</span>
+                </a>
+                
+                <a href="{{ url_for('admin.ingredient_list') }}" 
+                   class="nav-link flex items-center px-6 py-3 text-white no-underline {% if 'ingredient' in request.endpoint or 'bom' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-boxes mr-3"></i>
+                    <span>จัดการสต็อก</span>
+                </a>
+                
+                <a href="{{ url_for('admin.zone_list') }}" 
+                   class="nav-link flex items-center px-6 py-3 text-white no-underline {% if 'zone' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-map-marker-alt mr-3"></i>
+                    <span>จัดการโซน/โต๊ะ</span>
+                </a>
+                
+                <a href="{{ url_for('admin.promotion_list') }}" 
+                   class="nav-link flex items-center px-6 py-3 text-white no-underline {% if 'promotion' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-tags mr-3"></i>
+                    <span>โปรโมชัน</span>
+                </a>
+                
+                <a href="{{ url_for('admin.analytics') }}" 
+                   class="nav-link flex items-center px-6 py-3 text-white no-underline {% if 'analytics' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-chart-line mr-3"></i>
+                    <span>Analytics</span>
+                </a>
+                
+                <a href="{{ url_for('admin.reports_dashboard') }}" 
+                   class="nav-link flex items-center px-6 py-3 text-white no-underline {% if 'reports' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-chart-bar mr-3"></i>
+                    <span>รายงาน</span>
+                </a>
+                
+                <div class="border-t border-blue-400 mt-6 pt-6">
+                    <a href="{{ url_for('admin.profile') }}" 
+                       class="nav-link flex items-center px-6 py-3 text-white no-underline {% if request.endpoint == 'admin.profile' %}active{% endif %}">
+                        <i class="fas fa-user mr-3"></i>
+                        <span>โปรไฟล์</span>
+                    </a>
+                    
+                    <a href="{{ url_for('customer.index') }}" 
+                       class="nav-link flex items-center px-6 py-3 text-white no-underline">
+                        <i class="fas fa-home mr-3"></i>
+                        <span>กลับหน้าหลัก</span>
+                    </a>
+                    
+                    <a href="{{ url_for('admin.logout') }}" 
+                       class="nav-link flex items-center px-6 py-3 text-white no-underline">
+                        <i class="fas fa-sign-out-alt mr-3"></i>
+                        <span>ออกจากระบบ</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-2xl font-semibold text-gray-900">
+                                {% block page_title %}Admin Dashboard{% endblock %}
+                            </h1>
+                            <p class="text-sm text-gray-600 mt-1">
+                                {% block page_description %}จัดการร้านอาหารลานอิ่ม{% endblock %}
+                            </p>
+                        </div>
+                        
+                        <div class="flex items-center space-x-4">
+                            <!-- Notifications -->
+                            <div class="relative">
+                                <button id="notificationBtn" class="p-2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                                    <i class="fas fa-bell text-lg"></i>
+                                    <span id="notificationBadge" class="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hidden">0</span>
+                                </button>
+                            </div>
+                            
+                            <!-- User Info -->
+                            <div class="flex items-center">
+                                <i class="fas fa-user-circle text-2xl text-gray-400 mr-2"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">{{ current_user.username }}</p>
+                                    <p class="text-xs text-gray-500">ผู้ดูแลระบบ</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="px-6 py-2">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} mb-3 p-4 rounded-lg 
+                                      {% if category == 'error' %}bg-red-50 border border-red-200 text-red-700
+                                      {% elif category == 'success' %}bg-green-50 border border-green-200 text-green-700
+                                      {% elif category == 'warning' %}bg-yellow-50 border border-yellow-200 text-yellow-700
+                                      {% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %}">
+                                <div class="flex items-center">
+                                    <i class="fas fa-{% if category == 'error' %}exclamation-circle{% elif category == 'success' %}check-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} mr-2"></i>
+                                    {{ message }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Page Content -->
+            <main class="flex-1 overflow-y-auto p-6">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <script>
+        // Auto-hide flash messages
+        setTimeout(function() {
+            $('.alert').fadeOut('slow');
+        }, 5000);
+        
+        // Notification system (basic implementation)
+        function checkNotifications() {
+            // This would check for low stock alerts, new orders, etc.
+            // For now, just a placeholder
+        }
+        
+        // Check notifications every 30 seconds
+        setInterval(checkNotifications, 30000);
+        
+        // Initial notification check
+        checkNotifications();
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

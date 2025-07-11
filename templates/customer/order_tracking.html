@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block title %}ลานอิ่ม - ติดตามออเดอร์{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">ติดตามออเดอร์</h1>
+        <p class="text-gray-600">ออเดอร์ #{{ order.order_number }}</p>
+    </div>
+    
+    <!-- Order Status Progress -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-6">สถานะออเดอร์</h2>
+        
+        <!-- Progress Bar -->
+        <div class="relative">
+            <!-- Progress Line (connect all except last step) -->
+            <div class="absolute top-4 h-0.5 bg-gray-200" style="left: 2rem; width: 86%;"></div>
+            <div class="absolute top-4 h-0.5 bg-lanaim-primary transition-all duration-500" 
+                 style="left: 2rem; width: {{ get_progress_width(order.status) }}%;"></div>
+            
+            <!-- Status Steps -->
+            <div class="relative flex justify-between">
+                {% set statuses = [
+                    ('pending', 'รอรับออเดอร์', 'fas fa-clock'),
+                    ('accepted', 'รับออเดอร์แล้ว', 'fas fa-check'),
+                    ('preparing', 'กำลังเตรียม', 'fas fa-utensils'),
+                    ('ready', 'พร้อมส่ง', 'fas fa-box'),
+                    ('delivering', 'กำลังจัดส่ง', 'fas fa-motorcycle'),
+                    ('delivered', 'จัดส่งแล้ว', 'fas fa-check-circle')
+                ] %}
+                
+                {% for status, display_text, icon in statuses %}
+                <div class="flex flex-col items-center">
+                    <!-- Status Icon -->
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm
+                        {% if order.status == status or 
+                              (status == 'pending' and order.status in ['accepted', 'preparing', 'ready', 'delivering', 'delivered', 'completed']) or
+                              (status == 'accepted' and order.status in ['preparing', 'ready', 'delivering', 'delivered', 'completed']) or
+                              (status == 'preparing' and order.status in ['ready', 'delivering', 'delivered', 'completed']) or
+                              (status == 'ready' and order.status in ['delivering', 'delivered', 'completed']) or
+                              (status == 'delivering' and order.status in ['delivered', 'completed']) %}
+                            bg-lanaim-primary text-white
+                        {% else %}
+                            bg-gray-200 text-gray-400
+                        {% endif %}">
+                        <i class="{{ icon }}"></i>
+                    </div>
+                    
+                    <!-- Status Text -->
+                    <span class="text-xs mt-2 text-center
+                        {% if order.status == status %}
+                            text-lanaim-primary font-semibold
+                        {% else %}
+                            text-gray-500
+                        {% endif %}">
+                        {{ display_text }}
+                    </span>
+                    
+                    <!-- Current Status Indicator -->
+                    {% if order.status == status %}
+                    <div class="mt-1">
+                        <div class="w-2 h-2 bg-lanaim-primary rounded-full animate-pulse"></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Current Status -->
+        <div class="mt-8 text-center">
+            <p class="text-lg font-semibold text-lanaim-primary">{{ order.get_status_display() }}</p>
+            <p class="text-sm text-gray-600 mt-1">อัปเดตล่าสุด: {{ order.last_updated_at.strftime('%d/%m/%Y %H:%M น.') }}</p>
+        </div>
+    </div>
+    
+    <!-- Order Details -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">รายละเอียดออเดอร์</h2>
+        
+        <!-- Order Items -->
+        <div class="space-y-4 mb-6">
+            {% for item in order.items %}
+            <div class="flex items-start justify-between py-3 border-b border-gray-100 last:border-b-0">
+                <div class="flex-1">
+                    <h4 class="font-medium text-gray-900">{{ item.menu_name }} x{{ item.quantity }}</h4>
+                    
+                    <!-- Options -->
+                    {% if item.options %}
+                    <div class="mt-1">
+                        {% for option in item.options %}
+                        <span class="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded mr-1">
+                            {{ option.option_name }}
+                            {% if option.option_price > 0 %}(+฿{{ "%.0f"|format(option.option_price) }}){% endif %}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Special Requests -->
+                    {% if item.special_requests %}
+                    <p class="text-sm text-gray-600 mt-1">
+                        <i class="fas fa-sticky-note mr-1"></i>{{ item.special_requests }}
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <div class="text-right">
+                    <p class="font-medium text-gray-900">฿{{ "%.2f"|format(item.get_total_price()) }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Order Summary -->
+        <div class="border-t border-gray-200 pt-4">
+            <div class="flex justify-between items-center text-lg font-semibold">
+                <span>ยอดรวมสุทธิ</span>
+                <span class="text-lanaim-primary">฿{{ "%.2f"|format(order.get_total_price()) }}</span>
+            </div>
+            
+            <div class="mt-2 text-sm text-gray-600">
+                <p>วิธีการชำระเงิน: 
+                    {% if order.payment_method == 'COD' %}ชำระเงินสดปลายทาง{% else %}โอนจ่ายเมื่อรับของ{% endif %}
+                </p>
+                <p>สถานะการชำระ: 
+                    <span class="{% if order.payment_status == 'paid' %}text-green-600{% else %}text-yellow-600{% endif %}">
+                        {% if order.payment_status == 'paid' %}ชำระแล้ว{% else %}รอชำระ{% endif %}
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Customer Info -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลการจัดส่ง</h2>
+        
+        <div class="space-y-2 text-sm">
+            <div class="flex">
+                <span class="text-gray-600 w-20">ชื่อ:</span>
+                <span class="text-gray-900">{{ order.customer_name }}</span>
+            </div>
+            <div class="flex">
+                <span class="text-gray-600 w-20">เบอร์โทร:</span>
+                <span class="text-gray-900">{{ order.customer_phone }}</span>
+            </div>
+            <div class="flex">
+                <span class="text-gray-600 w-20">ที่อยู่:</span>
+                <span class="text-gray-900">{{ order.delivery_address_details }}</span>
+            </div>
+            {% if order.zone %}
+            <div class="flex">
+                <span class="text-gray-600 w-20">โซน:</span>
+                <span class="text-gray-900">{{ order.zone.name }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="space-y-4">
+        
+        <!-- Cancel Order (only if pending) -->
+        {% if order.can_be_cancelled() %}
+        <button onclick="cancelOrder()" 
+                class="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors">
+            <i class="fas fa-times mr-2"></i>ยกเลิกออเดอร์
+        </button>
+        {% endif %}
+        
+        <!-- Feedback (only if completed and no feedback yet) -->
+        {% if order.status == 'completed' and not order.feedback %}
+        <button onclick="showFeedbackModal()" 
+                class="w-full bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition-colors">
+            <i class="fas fa-star mr-2"></i>ให้คะแนนและความคิดเห็น
+        </button>
+        {% endif %}
+        
+        <!-- Back to Menu -->
+        <a href="{{ url_for('customer.menu') }}" 
+           class="block w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-center">
+            <i class="fas fa-utensils mr-2"></i>สั่งอาหารเพิ่ม
+        </a>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center h-full p-4">
+        <div class="bg-white rounded-lg max-w-md w-full">
+            <div class="p-6">
+                <div class="text-center mb-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">ให้คะแนนและความคิดเห็น</h3>
+                    <p class="text-gray-600">ช่วยเราปรับปรุงการบริการให้ดียิ่งขึ้น</p>
+                </div>
+                
+                <!-- Rating Stars -->
+                <div class="text-center mb-6">
+                    <p class="text-sm text-gray-700 mb-3">คะแนนความพึงพอใจ</p>
+                    <div class="flex justify-center space-x-2" id="rating-stars">
+                        {% for i in range(1, 6) %}
+                        <button onclick="setRating({{ i }})" 
+                                class="rating-star text-3xl text-gray-300 hover:text-yellow-400 transition-colors"
+                                data-rating="{{ i }}">
+                            <i class="fas fa-star"></i>
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <p id="rating-text" class="text-sm text-gray-600 mt-2">กรุณาเลือกคะแนน</p>
+                </div>
+                
+                <!-- Comment -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">ความคิดเห็น (ไม่บังคับ)</label>
+                    <textarea id="feedback-comment" rows="4" 
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lanaim-primary focus:border-transparent"
+                              placeholder="แบ่งปันประสบการณ์ของคุณ..."></textarea>
+                </div>
+                
+                <!-- Buttons -->
+                <div class="flex space-x-4">
+                    <button onclick="closeFeedbackModal()" 
+                            class="flex-1 bg-gray-300 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-400 transition-colors">
+                        ยกเลิก
+                    </button>
+                    <button onclick="submitFeedback()" 
+                            class="flex-1 bg-lanaim-primary text-white px-4 py-3 rounded-lg hover:bg-opacity-90 transition-colors">
+                        ส่งความคิดเห็น
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedRating = 0;
+    
+    // Auto-refresh order status every 30 seconds
+    setInterval(refreshOrderStatus, 30000);
+    
+    async function refreshOrderStatus() {
+        try {
+            const response = await fetch(`/api/order/{{ order.order_number }}/status`);
+            const data = await response.json();
+            
+            if (data.status !== '{{ order.status }}') {
+                // Status changed, reload page
+                LanAim.showToast('สถานะออเดอร์มีการอัปเดต กำลังโหลดใหม่...', 'info');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            }
+        } catch (error) {
+            console.error('Error refreshing status:', error);
+        }
+    }
+    
+    // Cancel order
+    async function cancelOrder() {
+        if (!confirm('ต้องการยกเลิกออเดอร์นี้หรือไม่?')) {
+            return;
+        }
+        
+        try {
+            const response = await LanAim.api.call('/api/order/{{ order.id }}/cancel', {
+                method: 'POST'
+            });
+            
+            LanAim.showToast(response.message, 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+            
+        } catch (error) {
+            console.error('Error canceling order:', error);
+        }
+    }
+    
+    // Show feedback modal
+    function showFeedbackModal() {
+        document.getElementById('feedback-modal').classList.remove('hidden');
+    }
+    
+    // Close feedback modal
+    function closeFeedbackModal() {
+        document.getElementById('feedback-modal').classList.add('hidden');
+        selectedRating = 0;
+        updateRatingDisplay();
+        document.getElementById('feedback-comment').value = '';
+    }
+    
+    // Set rating
+    function setRating(rating) {
+        selectedRating = rating;
+        updateRatingDisplay();
+    }
+    
+    // Update rating display
+    function updateRatingDisplay() {
+        const stars = document.querySelectorAll('.rating-star');
+        const ratingText = document.getElementById('rating-text');
+        
+        stars.forEach((star, index) => {
+            const rating = index + 1;
+            if (rating <= selectedRating) {
+                star.classList.add('text-yellow-400');
+                star.classList.remove('text-gray-300');
+            } else {
+                star.classList.add('text-gray-300');
+                star.classList.remove('text-yellow-400');
+            }
+        });
+        
+        const ratingTexts = {
+            0: 'กรุณาเลือกคะแนน',
+            1: 'ไม่พอใจมาก',
+            2: 'ไม่พอใจ',
+            3: 'ปานกลาง',
+            4: 'พอใจ',
+            5: 'พอใจมาก'
+        };
+        
+        ratingText.textContent = ratingTexts[selectedRating];
+    }
+    
+    // Submit feedback
+    async function submitFeedback() {
+        if (selectedRating === 0) {
+            LanAim.showToast('กรุณาเลือกคะแนน', 'error');
+            return;
+        }
+        
+        const comment = document.getElementById('feedback-comment').value.trim();
+        
+        try {
+            const response = await LanAim.api.call('/api/feedback', {
+                method: 'POST',
+                body: JSON.stringify({
+                    order_id: {{ order.id }},
+                    rating: selectedRating,
+                    comment: comment
+                })
+            });
+            
+            LanAim.showToast(response.message, 'success');
+            closeFeedbackModal();
+            
+            // Remove feedback button
+            const feedbackBtn = document.querySelector('button[onclick="showFeedbackModal()"]');
+            if (feedbackBtn) {
+                feedbackBtn.remove();
+            }
+            
+        } catch (error) {
+            console.error('Error submitting feedback:', error);
+        }
+    }
+    
+    // Initialize rating display
+    updateRatingDisplay();
+</script>
+
+<!-- Add this function to the base template or create a helper -->
+{% set progress_width_map = {
+    'pending': 0,
+    'accepted': 25,
+    'preparing': 50,
+    'ready': 75,
+    'completed': 100,
+    'cancelled': 0
+} %}
+
+<script>
+    function getProgressWidth(status) {
+        const widthMap = {
+            'pending': 0,
+            'accepted': 25,
+            'preparing': 50,
+            'ready': 75,
+            'completed': 100,
+            'cancelled': 0
+        };
+        return widthMap[status] || 0;
+    }
+</script>
+{% endblock %}
