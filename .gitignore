@@ -188,3 +188,8 @@ migrations/versions/*.py
 # Analysis and temporary scripts
 analyze_models.py
 fix_tests.py
+
+# Document files
+*.docx
+*.doc
+*.pdf
