@@ -1,0 +1,356 @@
+{% extends "admin/base.html" %}
+
+{% block title %}เพิ่มการตั้งค่าใหม่{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-8 text-white">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">เพิ่มการตั้งค่าใหม่</h1>
+                    <p class="mt-2 text-green-100">สร้างการตั้งค่าใหม่สำหรับระบบ</p>
+                </div>
+                <a href="{{ url_for('settings_management.settings_list') }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white border-opacity-30">
+                    <i class="fas fa-arrow-left mr-2"></i>กลับ
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <form method="POST" id="settingForm">
+                    <!-- Basic Information -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label for="key" class="block text-sm font-medium text-gray-700 mb-2">
+                                    ชื่อการตั้งค่า (Key) <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" 
+                                       id="key" 
+                                       name="key" 
+                                       class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500" 
+                                       placeholder="เช่น max_orders_per_hour"
+                                       required>
+                                <p class="mt-1 text-sm text-gray-500">ใช้ตัวอักษรภาษาอังกฤษ ตัวเลข และขีดล่าง เท่านั้น</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+                                        หมวดหมู่ <span class="text-red-500">*</span>
+                                    </label>
+                                    <select id="category" 
+                                            name="category" 
+                                            class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500"
+                                            required>
+                                        <option value="">เลือกหมวดหมู่</option>
+                                        <option value="general">ทั่วไป</option>
+                                        <option value="ordering">การสั่งซื้อ</option>
+                                        <option value="payment">การชำระเงิน</option>
+                                        <option value="delivery">การส่งอาหาร</option>
+                                        <option value="notifications">การแจ้งเตือน</option>
+                                        <option value="kitchen">ครัว</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="data_type" class="block text-sm font-medium text-gray-700 mb-2">
+                                        ประเภทข้อมูล <span class="text-red-500">*</span>
+                                    </label>
+                                    <select id="data_type" 
+                                            name="data_type" 
+                                            class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500"
+                                            required onchange="toggleValueField()">
+                                        <option value="string">ข้อความ (String)</option>
+                                        <option value="integer">จำนวนเต็ม (Integer)</option>
+                                        <option value="float">ทศนิยม (Float)</option>
+                                        <option value="boolean">เปิด/ปิด (Boolean)</option>
+                                        <option value="json">JSON</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">คำอธิบาย</label>
+                                <textarea id="description" 
+                                          name="description" 
+                                          rows="3"
+                                          class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500" 
+                                          placeholder="อธิบายการใช้งานและจุดประสงค์ของการตั้งค่านี้"></textarea>
+                            </div>
+
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       id="is_public" 
+                                       name="is_public" 
+                                       class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                                <label for="is_public" class="ml-2 text-sm font-medium text-gray-700">
+                                    อนุญาตให้ผู้ใช้ทั่วไปเข้าถึงได้
+                                </label>
+                                <i class="fas fa-info-circle ml-2 text-gray-400" title="หากเลือก ผู้ใช้ที่ไม่ใช่แอดมินจะสามารถดูค่านี้ได้"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Value Settings -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">ค่าเริ่มต้น</h3>
+                        
+                        <!-- String Value -->
+                        <div id="string_value" class="value-field">
+                            <label for="value_string" class="block text-sm font-medium text-gray-700 mb-2">ค่าเริ่มต้น</label>
+                            <input type="text" 
+                                   id="value_string" 
+                                   name="value" 
+                                   class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500" 
+                                   placeholder="ใส่ข้อความ">
+                        </div>
+
+                        <!-- Integer Value -->
+                        <div id="integer_value" class="value-field hidden">
+                            <label for="value_integer" class="block text-sm font-medium text-gray-700 mb-2">ค่าเริ่มต้น</label>
+                            <input type="number" 
+                                   id="value_integer" 
+                                   name="value" 
+                                   class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500" 
+                                   step="1"
+                                   placeholder="0">
+                        </div>
+
+                        <!-- Float Value -->
+                        <div id="float_value" class="value-field hidden">
+                            <label for="value_float" class="block text-sm font-medium text-gray-700 mb-2">ค่าเริ่มต้น</label>
+                            <input type="number" 
+                                   id="value_float" 
+                                   name="value" 
+                                   class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500" 
+                                   step="0.01"
+                                   placeholder="0.00">
+                        </div>
+
+                        <!-- Boolean Value -->
+                        <div id="boolean_value" class="value-field hidden">
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       id="value_boolean" 
+                                       name="value" 
+                                       value="true"
+                                       class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                                <label for="value_boolean" class="ml-2 text-sm font-medium text-gray-700">
+                                    เปิดใช้งานตั้งแต่เริ่มต้น
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- JSON Value -->
+                        <div id="json_value" class="value-field hidden">
+                            <label for="value_json" class="block text-sm font-medium text-gray-700 mb-2">ค่าเริ่มต้น (JSON)</label>
+                            <textarea id="value_json" 
+                                      name="value" 
+                                      rows="6"
+                                      class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500 font-mono text-sm"
+                                      placeholder='{"key": "value"}'>{}</textarea>
+                            <p class="mt-1 text-sm text-gray-500">ข้อมูลในรูปแบบ JSON ที่ถูกต้อง</p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-green-600 to-teal-600 text-white px-6 py-3 rounded-lg font-medium hover:from-green-700 hover:to-teal-700 transition-all duration-200 shadow-lg">
+                            <i class="fas fa-save mr-2"></i>สร้างการตั้งค่า
+                        </button>
+                        <a href="{{ url_for('settings_management.settings_list') }}" class="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200 text-center">
+                            <i class="fas fa-times mr-2"></i>ยกเลิก
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Data Type Info -->
+            <div class="bg-blue-50 rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-blue-900 mb-4">
+                    <i class="fas fa-info-circle mr-2"></i>ประเภทข้อมูล
+                </h3>
+                <div class="space-y-3 text-sm text-blue-800">
+                    <div>
+                        <div class="font-medium">ข้อความ (String)</div>
+                        <div>ข้อความทั่วไป เช่น ชื่อร้าน, ที่อยู่</div>
+                    </div>
+                    <div>
+                        <div class="font-medium">จำนวนเต็ม (Integer)</div>
+                        <div>ตัวเลขจำนวนเต็ม เช่น 10, 50, 100</div>
+                    </div>
+                    <div>
+                        <div class="font-medium">ทศนิยม (Float)</div>
+                        <div>ตัวเลขทศนิยม เช่น 10.50, 99.99</div>
+                    </div>
+                    <div>
+                        <div class="font-medium">เปิด/ปิด (Boolean)</div>
+                        <div>ค่าจริง/เท็จ สำหรับเปิด/ปิดฟีเจอร์</div>
+                    </div>
+                    <div>
+                        <div class="font-medium">JSON</div>
+                        <div>ข้อมูลซับซ้อน เช่น การตั้งค่าหลายค่า</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Info -->
+            <div class="bg-green-50 rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-green-900 mb-4">
+                    <i class="fas fa-folder mr-2"></i>หมวดหมู่
+                </h3>
+                <div class="space-y-2 text-sm text-green-800">
+                    <div><strong>ทั่วไป:</strong> การตั้งค่าพื้นฐานของร้าน</div>
+                    <div><strong>การสั่งซื้อ:</strong> การตั้งค่าเกี่ยวกับออเดอร์</div>
+                    <div><strong>การชำระเงิน:</strong> วิธีการรับชำระเงิน</div>
+                    <div><strong>การส่งอาหาร:</strong> การตั้งค่าเดลิเวอรี่</div>
+                    <div><strong>การแจ้งเตือน:</strong> การแจ้งเตือนต่างๆ</div>
+                    <div><strong>ครัว:</strong> การตั้งค่าเกี่ยวกับครัว</div>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="bg-yellow-50 rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-yellow-900 mb-4">
+                    <i class="fas fa-lightbulb mr-2"></i>เทคนิค
+                </h3>
+                <ul class="space-y-2 text-sm text-yellow-800">
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        ใช้ชื่อที่อธิบายชัดเจน
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        เลือกประเภทข้อมูลที่เหมาะสม
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        เขียนคำอธิบายที่เข้าใจง่าย
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        ระมัดระวังการตั้งค่าเป็นสาธารณะ
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleValueField() {
+    const dataType = document.getElementById('data_type').value;
+    const allFields = document.querySelectorAll('.value-field');
+    
+    // Hide all fields first
+    allFields.forEach(field => {
+        field.classList.add('hidden');
+        // Disable all inputs
+        field.querySelectorAll('input, textarea').forEach(input => {
+            input.disabled = true;
+        });
+    });
+    
+    // Show and enable the relevant field
+    const targetField = document.getElementById(dataType + '_value');
+    if (targetField) {
+        targetField.classList.remove('hidden');
+        targetField.querySelectorAll('input, textarea').forEach(input => {
+            input.disabled = false;
+        });
+    }
+}
+
+// Form validation
+document.getElementById('settingForm').addEventListener('submit', function(e) {
+    const key = document.getElementById('key').value.trim();
+    const category = document.getElementById('category').value;
+    const dataType = document.getElementById('data_type').value;
+    
+    if (!key) {
+        e.preventDefault();
+        alert('กรุณากรอกชื่อการตั้งค่า');
+        document.getElementById('key').focus();
+        return;
+    }
+    
+    if (!category) {
+        e.preventDefault();
+        alert('กรุณาเลือกหมวดหมู่');
+        document.getElementById('category').focus();
+        return;
+    }
+    
+    // Validate key format
+    if (!/^[a-zA-Z0-9_]+$/.test(key)) {
+        e.preventDefault();
+        alert('ชื่อการตั้งค่าต้องประกอบด้วยตัวอักษรภาษาอังกฤษ ตัวเลข และขีดล่าง เท่านั้น');
+        document.getElementById('key').focus();
+        return;
+    }
+    
+    // Validate JSON if type is json
+    if (dataType === 'json') {
+        const jsonValue = document.getElementById('value_json').value;
+        try {
+            JSON.parse(jsonValue);
+        } catch (e) {
+            e.preventDefault();
+            alert('กรุณาตรวจสอบรูปแบบ JSON ให้ถูกต้อง');
+            document.getElementById('value_json').focus();
+            return;
+        }
+    }
+    
+    // Handle boolean value
+    if (dataType === 'boolean') {
+        const booleanInput = document.getElementById('value_boolean');
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'value';
+        hiddenInput.value = booleanInput.checked ? 'true' : 'false';
+        this.appendChild(hiddenInput);
+        booleanInput.disabled = true;
+    }
+});
+
+// Key input formatting
+document.getElementById('key').addEventListener('input', function(e) {
+    // Convert to lowercase and replace spaces with underscores
+    let value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    // Remove consecutive underscores
+    value = value.replace(/_+/g, '_');
+    // Remove leading/trailing underscores
+    value = value.replace(/^_+|_+$/g, '');
+    e.target.value = value;
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleValueField();
+});
+
+// JSON formatter
+document.getElementById('value_json').addEventListener('blur', function() {
+    try {
+        const parsed = JSON.parse(this.value);
+        this.value = JSON.stringify(parsed, null, 2);
+        this.classList.remove('border-red-500');
+    } catch (e) {
+        this.classList.add('border-red-500');
+    }
+});
+</script>
+{% endblock %}

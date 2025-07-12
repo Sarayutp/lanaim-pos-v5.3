@@ -118,8 +118,8 @@ def menu_options(menu_id):
     
     menu = Menu.query.get_or_404(menu_id)
     
-    # Get all option groups for this menu
-    option_groups = MenuOptionGroup.query.filter_by(menu_id=menu_id).all()
+    # Get all active option groups for this menu
+    option_groups = MenuOptionGroup.query.filter_by(menu_id=menu_id, is_active=True).all()
     
     options_data = []
     for group in option_groups:
@@ -127,6 +127,7 @@ def menu_options(menu_id):
             'id': group.id,
             'name': group.name,
             'is_required': group.is_required,
+            'is_multiple': group.is_multiple,
             'max_selections': group.max_selections,
             'options': []
         }
