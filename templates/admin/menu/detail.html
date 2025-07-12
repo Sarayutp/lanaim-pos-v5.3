@@ -2,289 +2,265 @@
 
 {% block title %}รายละเอียดเมนู - {{ menu.name }}{% endblock %}
 
-{% block extra_css %}
-<style>
-    .detail-container {
-        background: white;
-        border-radius: 8px;
-        padding: 30px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .menu-image {
-        max-width: 100%;
-        height: auto;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .status-badge {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    
-    .status-active {
-        background: #d4edda;
-        color: #155724;
-    }
-    
-    .status-inactive {
-        background: #f8d7da;
-        color: #721c24;
-    }
-    
-    .info-card {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    
-    .recipe-item {
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        padding: 15px;
-        margin-bottom: 10px;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0">รายละเอียดเมนู</h1>
-            <p class="text-muted">{{ menu.name }}</p>
-        </div>
-        <div>
-            <a href="{{ url_for('admin.menu_edit', menu_id=menu.id) }}" class="btn btn-primary me-2">
-                <i class="fas fa-edit"></i> แก้ไข
-            </a>
-            <a href="{{ url_for('admin.menu_list') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> กลับ
-            </a>
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8 text-white">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">รายละเอียดเมนู</h1>
+                    <p class="mt-2 text-indigo-100">{{ menu.name }}</p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{{ url_for('admin.menu_edit', menu_id=menu.id) }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white border-opacity-30">
+                        <i class="fas fa-edit mr-2"></i>แก้ไข
+                    </a>
+                    <a href="{{ url_for('admin.menu_list') }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white border-opacity-30">
+                        <i class="fas fa-arrow-left mr-2"></i>กลับ
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Menu Information -->
-        <div class="col-lg-8">
-            <div class="detail-container">
-                <div class="row">
-                    <div class="col-md-4">
-                        {% if menu.image_url %}
-                            <img src="{{ menu.image_url }}" 
-                                 alt="{{ menu.name }}" 
-                                 class="menu-image">
-                        {% else %}
-                            <div class="menu-image d-flex align-items-center justify-content-center" 
-                                 style="height: 200px; background: #f8f9fa; border: 2px dashed #dee2e6;">
-                                <div class="text-center">
-                                    <i class="fas fa-image fa-3x text-muted"></i>
-                                    <p class="text-muted mt-2">ไม่มีรูปภาพ</p>
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-8">
-                        <h2>{{ menu.name }}</h2>
-                        <p class="text-muted">{{ menu.description or "ไม่มีคำอธิบาย" }}</p>
-                        
-                        <div class="row mb-3">
-                            <div class="col-sm-6">
-                                <strong>ราคา:</strong>
-                                <span class="h4 text-primary">฿{{ "%.2f"|format(menu.price) }}</span>
-                            </div>
-                            <div class="col-sm-6">
-                                <strong>สถานะ:</strong>
-                                <span class="status-badge {{ 'status-active' if menu.is_active else 'status-inactive' }}">
-                                    {{ "เปิดใช้งาน" if menu.is_active else "ปิดใช้งาน" }}
-                                </span>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Menu Image -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">รูปภาพเมนู</h3>
+                    {% if menu.image_url %}
+                        <img src="{{ menu.image_url }}" alt="{{ menu.name }}" class="w-full h-80 object-cover rounded-lg shadow-lg">
+                    {% else %}
+                        <div class="w-full h-80 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <div class="text-center text-gray-400">
+                                <i class="fas fa-utensils text-6xl mb-4"></i>
+                                <p class="text-lg">ไม่มีรูปภาพ</p>
                             </div>
                         </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-sm-6">
-                                <strong>หมวดหมู่:</strong>
-                                <span>{{ menu.category or "ไม่ระบุ" }}</span>
-                            </div>
-                            <div class="col-sm-6">
-                                <strong>เวลาเตรียม:</strong>
-                                <span>{{ menu.prep_time or "ไม่ระบุ" }} นาที</span>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-sm-6">
-                                <strong>วันที่สร้าง:</strong>
-                                <span>{{ menu.created_at.strftime('%d/%m/%Y %H:%M') if menu.created_at else "ไม่ทราบ" }}</span>
-                            </div>
-                            <div class="col-sm-6">
-                                <strong>แก้ไขล่าสุด:</strong>
-                                <span>{{ menu.updated_at.strftime('%d/%m/%Y %H:%M') if menu.updated_at else "ไม่ทราบ" }}</span>
-                            </div>
-                        </div>
-                    </div>
+                    {% endif %}
                 </div>
             </div>
 
-            <!-- Recipe BOM -->
-            {% if recipe_items %}
-            <div class="detail-container mt-4">
-                <h4 class="mb-3">
-                    <i class="fas fa-list-ul"></i> สูตรอาหาร (BOM)
-                </h4>
-                
-                {% for item in recipe_items %}
-                <div class="recipe-item">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <strong>{{ item.ingredient.name }}</strong>
-                            <br>
-                            <small class="text-muted">{{ item.ingredient.category or "ไม่ระบุหมวดหมู่" }}</small>
+            <!-- Basic Information -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อเมนู</label>
+                        <p class="text-lg text-gray-900">{{ menu.name }}</p>
+                    </div>
+                    
+                    {% if menu.description %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">คำอธิบาย</label>
+                        <p class="text-gray-700 leading-relaxed">{{ menu.description }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ราคา</label>
+                            <p class="text-2xl font-bold text-indigo-600">฿{{ "%.2f"|format(menu.price) }}</p>
                         </div>
-                        <div class="col-md-3">
-                            <span class="badge bg-primary">{{ item.quantity }} {{ item.ingredient.unit }}</span>
+                        {% if menu.category %}
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">หมวดหมู่</label>
+                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">{{ menu.category }}</span>
                         </div>
-                        <div class="col-md-3">
-                            <span class="text-muted">
-                                {% if item.ingredient.cost_per_unit %}
-                                    ฿{{ "%.2f"|format(item.quantity * item.ingredient.cost_per_unit) }}
-                                {% else %}
-                                    ไม่ระบุราคา
-                                {% endif %}
-                            </span>
+                        {% endif %}
+                    </div>
+
+                    {% if menu.prep_time %}
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">เวลาเตรียม</label>
+                        <p class="text-gray-900">{{ menu.prep_time }} นาที</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Additional Info -->
+            {% if menu.ingredients or menu.allergens or menu.nutrition_info %}
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลเพิ่มเติม</h3>
+                <div class="space-y-4">
+                    {% if menu.ingredients %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">วัตถุดิบ</label>
+                        <div class="flex flex-wrap gap-2">
+                            {% for ingredient in menu.ingredients.split(',') %}
+                            <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">{{ ingredient.strip() }}</span>
+                            {% endfor %}
                         </div>
                     </div>
-                </div>
-                {% endfor %}
-                
-                <div class="mt-3 p-3 bg-light rounded">
-                    <strong>ต้นทุนวัตถุดิบรวม: 
-                        {% set total_cost = recipe_items|sum(attribute='cost') if recipe_items[0].cost else 0 %}
-                        <span class="text-primary">฿{{ "%.2f"|format(total_cost) }}</span>
-                    </strong>
-                    <br>
-                    <small class="text-muted">
-                        กำไรขั้นต้น: ฿{{ "%.2f"|format(menu.price - total_cost) }}
-                        ({{ "%.1f"|format(((menu.price - total_cost) / menu.price * 100) if total_cost > 0 else 0) }}%)
-                    </small>
+                    {% endif %}
+
+                    {% if menu.allergens %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">สารก่อภูมิแพ้</label>
+                        <div class="flex flex-wrap gap-2">
+                            {% for allergen in menu.allergens.split(',') %}
+                            <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">{{ allergen.strip() }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if menu.nutrition_info %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ข้อมูลโภชนาการ</label>
+                        <p class="text-gray-700">{{ menu.nutrition_info }}</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
         </div>
 
-        <!-- Quick Actions & Stats -->
-        <div class="col-lg-4">
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Status Card -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">สถานะเมนู</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">สถานะ:</span>
+                        <span class="px-3 py-1 text-xs font-medium rounded-full {{ 'bg-green-100 text-green-800' if menu.is_active else 'bg-red-100 text-red-800' }}">
+                            {{ "เปิดใช้งาน" if menu.is_active else "ปิดใช้งาน" }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">ID:</span>
+                        <span class="text-sm text-gray-900 font-mono">#{{ menu.id }}</span>
+                    </div>
+                    {% if menu.created_at %}
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">วันที่สร้าง:</span>
+                        <span class="text-sm text-gray-900">{{ menu.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                    {% endif %}
+                    {% if menu.updated_at %}
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">แก้ไขล่าสุด:</span>
+                        <span class="text-sm text-gray-900">{{ menu.updated_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <!-- Quick Actions -->
-            <div class="info-card">
-                <h5 class="mb-3">การจัดการ</h5>
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('admin.menu_edit', menu_id=menu.id) }}" class="btn btn-outline-primary">
-                        <i class="fas fa-edit"></i> แก้ไขเมนู
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">การดำเนินการ</h3>
+                <div class="space-y-3">
+                    <a href="{{ url_for('admin.menu_edit', menu_id=menu.id) }}" class="w-full bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-3 rounded-lg font-medium transition-colors text-center block">
+                        <i class="fas fa-edit mr-2"></i>แก้ไขเมนู
                     </a>
-                    <a href="{{ url_for('admin.menu_options', menu_id=menu.id) }}" class="btn btn-outline-info">
-                        <i class="fas fa-cog"></i> จัดการตัวเลือก
-                    </a>
-                    <button class="btn btn-outline-danger" onclick="confirmDelete()">
-                        <i class="fas fa-trash"></i> ลบเมนู
+                    <button onclick="toggleStatus()" class="w-full {{ 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' if menu.is_active else 'bg-green-50 text-green-600 hover:bg-green-100' }} px-4 py-3 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-{{ 'eye-slash' if menu.is_active else 'eye' }} mr-2"></i>{{ 'ปิดใช้งาน' if menu.is_active else 'เปิดใช้งาน' }}
+                    </button>
+                    <button onclick="confirmDelete()" class="w-full bg-red-50 text-red-600 hover:bg-red-100 px-4 py-3 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-trash mr-2"></i>ลบเมนู
                     </button>
                 </div>
             </div>
 
-            <!-- Statistics -->
-            <div class="info-card">
-                <h5 class="mb-3">สถิติการขาย</h5>
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="border-end">
-                            <h4 class="text-primary mb-0">{{ sales_count or 0 }}</h4>
-                            <small class="text-muted">ยอดขายทั้งหมด</small>
-                        </div>
+            <!-- Menu Statistics -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">สถิติ</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">ออเดอร์ทั้งหมด:</span>
+                        <span class="text-sm font-bold text-gray-900">{{ menu.total_orders or 0 }}</span>
                     </div>
-                    <div class="col-6">
-                        <h4 class="text-success mb-0">฿{{ "%.0f"|format(sales_revenue or 0) }}</h4>
-                        <small class="text-muted">รายได้รวม</small>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">ยอดขายรวม:</span>
+                        <span class="text-sm font-bold text-gray-900">฿{{ "%.2f"|format(menu.total_revenue or 0) }}</span>
                     </div>
-                </div>
-                <hr>
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="border-end">
-                            <h5 class="text-info mb-0">{{ monthly_sales or 0 }}</h5>
-                            <small class="text-muted">ขายเดือนนี้</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <h5 class="text-warning mb-0">{{ avg_rating or "N/A" }}</h5>
-                        <small class="text-muted">คะแนนเฉลี่ย</small>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Menu Options -->
-            {% if menu.option_groups %}
-            <div class="info-card">
-                <h5 class="mb-3">ตัวเลือกเมนู</h5>
-                {% for group in menu.option_groups %}
-                <div class="mb-2">
-                    <strong>{{ group.name }}</strong>
-                    <small class="text-muted">({{ group.option_items|length }} ตัวเลือก)</small>
-                    <ul class="list-unstyled ms-3">
-                        {% for option in group.option_items[:3] %}
-                        <li class="small">
-                            • {{ option.name }} 
-                            {% if option.additional_price > 0 %}
-                                <span class="text-muted">+฿{{ option.additional_price }}</span>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">คะแนนเฉลี่ย:</span>
+                        <span class="text-sm font-bold text-gray-900">
+                            {% if menu.average_rating %}
+                                {{ "%.1f"|format(menu.average_rating) }}/5
+                                <div class="flex items-center mt-1">
+                                    {% for i in range(5) %}
+                                        <i class="fas fa-star text-xs {{ 'text-yellow-400' if i < menu.average_rating else 'text-gray-300' }}"></i>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                ยังไม่มีคะแนน
                             {% endif %}
-                        </li>
-                        {% endfor %}
-                        {% if group.option_items|length > 3 %}
-                        <li class="small text-muted">... และอีก {{ group.option_items|length - 3 }} ตัวเลือก</li>
-                        {% endif %}
-                    </ul>
+                        </span>
+                    </div>
                 </div>
-                {% endfor %}
             </div>
-            {% endif %}
         </div>
     </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">ยืนยันการลบ</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div id="deleteModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">ยืนยันการลบ</h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500">คุณแน่ใจหรือไม่ว่าต้องการลบเมนู <strong class="text-gray-900">{{ menu.name }}</strong>?</p>
+                            <p class="text-sm text-red-600 mt-2">การดำเนินการนี้ไม่สามารถย้อนกลับได้</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="modal-body">
-                <p>คุณแน่ใจหรือไม่ว่าต้องการลบเมนู <strong>"{{ menu.name }}"</strong>?</p>
-                <p class="text-danger small">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    การดำเนินการนี้ไม่สามารถย้อนกลับได้
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                <form method="POST" action="{{ url_for('admin.menu_delete', menu_id=menu.id) }}" style="display: inline;">
-                    <button type="submit" class="btn btn-danger">ลบเมนู</button>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <form action="{{ url_for('admin.menu_delete', menu_id=menu.id) }}" method="POST" class="inline">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">ลบเมนู</button>
                 </form>
+                <button type="button" onclick="closeDeleteModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">ยกเลิก</button>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
+function toggleStatus() {
+    const currentStatus = {{ 'true' if menu.is_active else 'false' }};
+    const newStatus = !currentStatus;
+    
+    fetch(`/admin/api/menu/{{ menu.id }}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_active: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('เกิดข้อผิดพลาด: ' + error);
+    });
+}
+
 function confirmDelete() {
-    $('#deleteModal').modal('show');
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
 }
 </script>
 {% endblock %}

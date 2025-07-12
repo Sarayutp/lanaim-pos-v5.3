@@ -47,6 +47,39 @@ class BackupManager:
         """Schedule automatic backups"""
         # Schedule daily backup at 2 AM
         schedule.every().day.at("02:00").do(self.create_backup)
+    
+    def get_backup_status(self):
+        """Get backup system status and recent backups"""
+        try:
+            backup_files = []
+            if os.path.exists(self.backup_path):
+                for file in os.listdir(self.backup_path):
+                    if file.endswith('.gz'):
+                        file_path = os.path.join(self.backup_path, file)
+                        stat = os.stat(file_path)
+                        backup_files.append({
+                            'filename': file,
+                            'size': stat.st_size,
+                            'created': datetime.fromtimestamp(stat.st_ctime),
+                            'modified': datetime.fromtimestamp(stat.st_mtime)
+                        })
+            
+            backup_files.sort(key=lambda x: x['created'], reverse=True)
+            
+            return {
+                'status': 'operational',
+                'backup_count': len(backup_files),
+                'latest_backup': backup_files[0] if backup_files else None,
+                'backup_path': self.backup_path,
+                'retention_days': self.retention_days
+            }
+        except Exception as e:
+            return {
+                'status': 'error',
+                'error': str(e),
+                'backup_count': 0,
+                'latest_backup': None
+            }
         
         # Schedule weekly full backup on Sunday at 3 AM
         schedule.every().sunday.at("03:00").do(self.create_full_backup)

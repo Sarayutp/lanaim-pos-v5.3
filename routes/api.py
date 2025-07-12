@@ -391,7 +391,7 @@ def get_order_details(order_number):
             for option in item.options:
                 item_data['options'].append({
                     'name': option.option_name,
-                    'additional_price': float(option.additional_price)
+                    'additional_price': float(option.option_price)
                 })
             
             items_data.append(item_data)

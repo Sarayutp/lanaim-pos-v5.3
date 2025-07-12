@@ -177,11 +177,11 @@ def order_details(order_id):
             options = []
             for option in item.options:
                 from models import MenuOptionItem
-                option_item = db.session.get(MenuOptionItem, option.option_item_id)
+                option_item = db.session.get(MenuOptionItem, option.option_id)
                 if option_item:
                     options.append({
-                        'name': option_item.name,
-                        'price': float(option.additional_price)
+                        'name': option.option_name,
+                        'price': float(option.option_price)
                     })
             
             detailed_items.append({

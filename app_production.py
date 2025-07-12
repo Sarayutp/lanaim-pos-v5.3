@@ -8,10 +8,11 @@ import logging
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template
 from flask_migrate import Migrate
+from flask_login import LoginManager
 
 # Import production modules
 from config_production import ProductionConfig
-from security import SecurityManager, security_manager
+from security import SecurityManager, security_manager, admin_required
 from backup import BackupManager, backup_manager
 from notifications import NotificationManager, notification_manager
 from caching import CacheManager, cache_manager
@@ -34,11 +35,23 @@ def create_production_app():
         logger.info("Loaded development configuration")
     
     # Initialize database
-    from models import db
+    from models import db, User
     db.init_app(app)
     
     # Initialize Flask-Migrate
     migrate = Migrate(app, db)
+    
+    # Initialize login manager
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    login_manager.login_view = 'staff.login'
+    login_manager.login_message = 'กรุณาเข้าสู่ระบบเพื่อเข้าถึงหน้านี้'
+    login_manager.login_message_category = 'info'
+    
+    @login_manager.user_loader
+    def load_user(user_id):
+        """Load user for Flask-Login"""
+        return db.session.get(User, int(user_id))
     
     # Initialize production components
     init_production_components(app)
@@ -117,21 +130,25 @@ def register_blueprints(app):
     """Register all application blueprints"""
     
     try:
-        # Import and register main routes
-        from routes.main import main_bp
-        app.register_blueprint(main_bp)
+        # Import and register main routes (skip if not available)
+        # from routes.main import main_bp
+        # app.register_blueprint(main_bp)
+        
+        # Import and register customer routes
+        from routes.customer import customer_bp
+        app.register_blueprint(customer_bp)
+        
+        # Import and register staff routes  
+        from routes.staff import staff_bp
+        app.register_blueprint(staff_bp, url_prefix='/staff')
+        
+        # Import and register API routes
+        from routes.api import api_bp
+        app.register_blueprint(api_bp, url_prefix='/api')
         
         # Import and register admin routes
         from routes.admin import admin_bp
         app.register_blueprint(admin_bp, url_prefix='/admin')
-        
-        # Import and register kitchen routes
-        from routes.kitchen import kitchen_bp
-        app.register_blueprint(kitchen_bp, url_prefix='/kitchen')
-        
-        # Import and register delivery routes
-        from routes.delivery import delivery_bp
-        app.register_blueprint(delivery_bp, url_prefix='/delivery')
         
         logger.info("Application blueprints registered")
         
@@ -148,7 +165,7 @@ def register_fallback_routes(app):
         return render_template('menu.html')
     
     @app.route('/admin')
-    @security_manager.admin_required
+    @admin_required
     def admin():
         return render_template('admin/dashboard.html')
     
@@ -167,7 +184,7 @@ def register_production_routes(app):
         return jsonify(health_status), status_code
     
     @app.route('/admin/system-status')
-    @security_manager.admin_required
+    @admin_required
     def system_status():
         """Detailed system status for admins"""
         try:
@@ -191,7 +208,7 @@ def register_production_routes(app):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/admin/clear-cache', methods=['POST'])
-    @security_manager.admin_required
+    @admin_required
     def clear_cache():
         """Clear application cache"""
         try:
@@ -205,7 +222,7 @@ def register_production_routes(app):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/admin/backup', methods=['POST'])
-    @security_manager.admin_required
+    @admin_required
     def manual_backup():
         """Trigger manual backup"""
         try:
@@ -222,7 +239,7 @@ def register_production_routes(app):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/admin/backups')
-    @security_manager.admin_required
+    @admin_required
     def list_backups():
         """List available backups"""
         try:
@@ -233,7 +250,7 @@ def register_production_routes(app):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/admin/security-log')
-    @security_manager.admin_required
+    @admin_required
     def security_log():
         """View security events"""
         try:

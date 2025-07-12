@@ -269,12 +269,10 @@ def get_order_status(order_number):
             # Get options
             options = []
             for option in item.options:
-                option_item = db.session.get(MenuOptionItem, option.option_item_id)
-                if option_item:
-                    options.append({
-                        'name': option_item.name,
-                        'price': float(option.additional_price)
-                    })
+                options.append({
+                    'name': option.option_name,
+                    'price': float(option.option_price)
+                })
             
             order_items.append({
                 'menu_name': menu.name if menu else 'Unknown Item',

@@ -23,8 +23,8 @@ def staff_required(f):
         if not current_user.is_authenticated:
             return redirect(url_for('staff.login'))
         
-        # Check if user is staff (role is staff, kitchen, delivery, or admin)
-        if current_user.role not in ['staff', 'kitchen', 'delivery', 'admin']:
+        # Check if user is staff (role is staff, kitchen_staff, delivery_staff, or admin)
+        if current_user.role not in ['staff', 'kitchen_staff', 'delivery_staff', 'admin']:
             flash('คุณไม่มีสิทธิ์เข้าถึงหน้านี้', 'error')
             return redirect(url_for('staff.login'))
         
