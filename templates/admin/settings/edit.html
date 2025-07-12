@@ -1,0 +1,215 @@
+{% extends "admin/base.html" %}
+
+{% block title %}แก้ไขการตั้งค่า - {{ category }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-8 text-white">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">แก้ไขการตั้งค่า</h1>
+                    <p class="mt-2 text-blue-100">
+                        หมวด: 
+                        {% if category == 'general' %}ทั่วไป
+                        {% elif category == 'ordering' %}การสั่งซื้อ
+                        {% elif category == 'payment' %}การชำระเงิน
+                        {% elif category == 'delivery' %}การส่งอาหาร
+                        {% elif category == 'notifications' %}การแจ้งเตือน
+                        {% elif category == 'kitchen' %}ครัว
+                        {% else %}{{ category }}{% endif %}
+                    </p>
+                </div>
+                <a href="{{ url_for('settings_management.settings_list', category=category) }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white border-opacity-30">
+                    <i class="fas fa-arrow-left mr-2"></i>กลับ
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        {% if settings %}
+        <form method="POST" id="settingsForm">
+            <input type="hidden" name="category" value="{{ category }}">
+            
+            <div class="space-y-6">
+                {% for setting in settings %}
+                <div class="border border-gray-200 rounded-lg p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <label for="setting_{{ setting.id }}" class="block text-lg font-medium text-gray-900 mb-1">
+                                {{ setting.key }}
+                            </label>
+                            {% if setting.description %}
+                                <p class="text-gray-600 text-sm mb-3">{{ setting.description }}</p>
+                            {% endif %}
+                        </div>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ml-4
+                                   {% if setting.data_type == 'boolean' %}bg-green-100 text-green-800
+                                   {% elif setting.data_type == 'integer' %}bg-blue-100 text-blue-800
+                                   {% elif setting.data_type == 'float' %}bg-purple-100 text-purple-800
+                                   {% elif setting.data_type == 'json' %}bg-orange-100 text-orange-800
+                                   {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ setting.data_type }}
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        {% if setting.data_type == 'boolean' %}
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       id="setting_{{ setting.id }}" 
+                                       name="setting_{{ setting.id }}" 
+                                       class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                       {{ 'checked' if setting.get_value() else '' }}>
+                                <label for="setting_{{ setting.id }}" class="ml-2 text-sm font-medium text-gray-700">
+                                    เปิดใช้งาน
+                                </label>
+                            </div>
+                            
+                        {% elif setting.data_type == 'json' %}
+                            <div>
+                                <textarea id="setting_{{ setting.id }}" 
+                                          name="setting_{{ setting.id }}" 
+                                          rows="6"
+                                          class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"
+                                          placeholder="ใส่ข้อมูล JSON">{{ setting.value or '{}' }}</textarea>
+                                <p class="mt-1 text-sm text-gray-500">ข้อมูลในรูปแบบ JSON</p>
+                            </div>
+                            
+                        {% elif setting.data_type == 'integer' %}
+                            <div>
+                                <input type="number" 
+                                       id="setting_{{ setting.id }}" 
+                                       name="setting_{{ setting.id }}" 
+                                       class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+                                       value="{{ setting.get_value() or 0 }}"
+                                       step="1">
+                                <p class="mt-1 text-sm text-gray-500">จำนวนเต็ม</p>
+                            </div>
+                            
+                        {% elif setting.data_type == 'float' %}
+                            <div>
+                                <input type="number" 
+                                       id="setting_{{ setting.id }}" 
+                                       name="setting_{{ setting.id }}" 
+                                       class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+                                       value="{{ setting.get_value() or 0.0 }}"
+                                       step="0.01">
+                                <p class="mt-1 text-sm text-gray-500">ทศนิยม</p>
+                            </div>
+                            
+                        {% else %} <!-- string -->
+                            <div>
+                                {% if setting.key in ['restaurant_address', 'description'] %}
+                                    <textarea id="setting_{{ setting.id }}" 
+                                              name="setting_{{ setting.id }}" 
+                                              rows="3"
+                                              class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                              placeholder="ใส่ข้อความ">{{ setting.get_value() or '' }}</textarea>
+                                {% else %}
+                                    <input type="text" 
+                                           id="setting_{{ setting.id }}" 
+                                           name="setting_{{ setting.id }}" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+                                           value="{{ setting.get_value() or '' }}"
+                                           placeholder="ใส่ข้อความ">
+                                {% endif %}
+                                <p class="mt-1 text-sm text-gray-500">ข้อความ</p>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="text-xs text-gray-400">
+                            ID: {{ setting.id }} | 
+                            อัปเดตล่าสุด: {{ setting.updated_at.strftime('%d/%m/%Y %H:%M') if setting.updated_at else 'ไม่มี' }}
+                            {% if setting.updater %} โดย {{ setting.updater.username }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-6 mt-8 border-t border-gray-200">
+                <button type="submit" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg">
+                    <i class="fas fa-save mr-2"></i>บันทึกการเปลี่ยนแปลง
+                </button>
+                <a href="{{ url_for('settings_management.settings_list', category=category) }}" class="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200 text-center">
+                    <i class="fas fa-times mr-2"></i>ยกเลิก
+                </a>
+            </div>
+        </form>
+        
+        {% else %}
+        <div class="text-center py-16">
+            <i class="fas fa-cog text-6xl text-gray-300 mb-6"></i>
+            <h3 class="text-2xl font-bold text-gray-600 mb-4">ไม่มีการตั้งค่า</h3>
+            <p class="text-gray-500 mb-8">ยังไม่มีการตั้งค่าในหมวดหมู่นี้</p>
+            <a href="{{ url_for('settings_management.settings_add', category=category) }}" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-plus mr-2"></i>เพิ่มการตั้งค่าแรก
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Form validation
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+    // Validate JSON fields
+    const jsonFields = document.querySelectorAll('textarea[name^="setting_"]:not([data-type="string"])');
+    let hasError = false;
+    
+    jsonFields.forEach(function(field) {
+        if (field.closest('.space-y-3').querySelector('.bg-orange-100')) { // JSON field
+            try {
+                JSON.parse(field.value);
+                field.classList.remove('border-red-500');
+            } catch (e) {
+                field.classList.add('border-red-500');
+                hasError = true;
+            }
+        }
+    });
+    
+    if (hasError) {
+        e.preventDefault();
+        alert('กรุณาตรวจสอบรูปแบบ JSON ให้ถูกต้อง');
+        return;
+    }
+    
+    // Validate numeric fields
+    const numberFields = document.querySelectorAll('input[type="number"]');
+    numberFields.forEach(function(field) {
+        if (field.value === '') {
+            field.value = field.step && field.step.includes('.') ? '0.0' : '0';
+        }
+    });
+});
+
+// JSON formatter for better editing
+document.querySelectorAll('textarea[name^="setting_"]').forEach(function(textarea) {
+    if (textarea.closest('.space-y-3').querySelector('.bg-orange-100')) { // JSON field
+        textarea.addEventListener('blur', function() {
+            try {
+                const parsed = JSON.parse(this.value);
+                this.value = JSON.stringify(parsed, null, 2);
+                this.classList.remove('border-red-500');
+            } catch (e) {
+                this.classList.add('border-red-500');
+            }
+        });
+    }
+});
+
+// Auto-resize textareas
+document.querySelectorAll('textarea').forEach(function(textarea) {
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+});
+</script>
+{% endblock %}

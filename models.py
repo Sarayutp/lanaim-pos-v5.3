@@ -119,7 +119,9 @@ class MenuOptionGroup(db.Model):
     menu_id = db.Column(db.Integer, db.ForeignKey('menus.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)  # e.g., "เพิ่มท็อปปิ้ง"
     is_required = db.Column(db.Boolean, default=False)  # Must select an option
+    is_multiple = db.Column(db.Boolean, default=False)  # Allow multiple selections
     max_selections = db.Column(db.Integer, default=1)  # Maximum options selectable
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=get_thai_now, nullable=False)
     
     # Relationships

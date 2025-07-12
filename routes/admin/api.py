@@ -6,7 +6,7 @@ from werkzeug.exceptions import BadRequest
 from sqlalchemy.exc import IntegrityError
 from models import (
     db, Menu, Ingredient, DeliveryZone, 
-    User, Promotion, Order
+    User, Promotion, Order, MenuOptionGroup, MenuOptionItem
 )
 from .auth import admin_required
 import logging
@@ -336,6 +336,196 @@ def get_zone(zone_id):
         })
     except Exception as e:
         return handle_error(e, f"Failed to fetch delivery zone {zone_id}")
+
+# ============= TOPPING MANAGEMENT CRUD =============
+
+@admin_api_bp.route('/menu/<int:menu_id>/option-groups', methods=['GET'])
+@admin_required
+def get_menu_option_groups(menu_id):
+    """Get all option groups for a menu"""
+    try:
+        groups = MenuOptionGroup.query.filter_by(menu_id=menu_id, is_active=True).all()
+        return jsonify([{
+            'id': group.id,
+            'name': group.name,
+            'is_required': group.is_required,
+            'is_multiple': group.is_multiple,
+            'options': [{
+                'id': option.id,
+                'name': option.name,
+                'additional_price': float(option.additional_price),
+                'is_active': option.is_active
+            } for option in group.options if option.is_active]
+        } for group in groups])
+    except Exception as e:
+        return handle_error(e, f"Failed to fetch option groups for menu {menu_id}")
+
+@admin_api_bp.route('/menu/<int:menu_id>/option-groups', methods=['POST'])
+@admin_required
+def create_option_group(menu_id):
+    """Create new option group for menu"""
+    try:
+        data = request.get_json()
+        
+        group = MenuOptionGroup(
+            menu_id=menu_id,
+            name=data.get('name'),
+            is_required=data.get('is_required', False),
+            is_multiple=data.get('is_multiple', False)
+        )
+        
+        db.session.add(group)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'เพิ่มกลุ่มตัวเลือก "{group.name}" เรียบร้อยแล้ว',
+            'group': {
+                'id': group.id,
+                'name': group.name,
+                'is_required': group.is_required,
+                'is_multiple': group.is_multiple
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return handle_error(e, f"Failed to create option group for menu {menu_id}")
+
+@admin_api_bp.route('/option-groups/<int:group_id>', methods=['PUT'])
+@admin_required
+def update_option_group(group_id):
+    """Update option group"""
+    try:
+        group = MenuOptionGroup.query.get_or_404(group_id)
+        data = request.get_json()
+        
+        group.name = data.get('name', group.name)
+        group.is_required = data.get('is_required', group.is_required)
+        group.is_multiple = data.get('is_multiple', group.is_multiple)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'แก้ไขกลุ่มตัวเลือก "{group.name}" เรียบร้อยแล้ว'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return handle_error(e, f"Failed to update option group {group_id}")
+
+@admin_api_bp.route('/option-groups/<int:group_id>', methods=['DELETE'])
+@admin_required
+def delete_option_group(group_id):
+    """Delete option group"""
+    try:
+        group = MenuOptionGroup.query.get_or_404(group_id)
+        
+        group.is_active = False
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'ลบกลุ่มตัวเลือก "{group.name}" เรียบร้อยแล้ว'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return handle_error(e, f"Failed to delete option group {group_id}")
+
+@admin_api_bp.route('/option-groups/<int:group_id>/options', methods=['POST'])
+@admin_required
+def create_option_item(group_id):
+    """Create new option item"""
+    try:
+        data = request.get_json()
+        
+        option = MenuOptionItem(
+            group_id=group_id,
+            name=data.get('name'),
+            additional_price=float(data.get('additional_price', 0))
+        )
+        
+        db.session.add(option)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'เพิ่มตัวเลือก "{option.name}" เรียบร้อยแล้ว',
+            'option': {
+                'id': option.id,
+                'name': option.name,
+                'additional_price': float(option.additional_price),
+                'is_active': option.is_active
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return handle_error(e, f"Failed to create option item for group {group_id}")
+
+@admin_api_bp.route('/options/<int:option_id>', methods=['GET'])
+@admin_required
+def get_option_item(option_id):
+    """Get single option item"""
+    try:
+        option = MenuOptionItem.query.get_or_404(option_id)
+        
+        return jsonify({
+            'success': True,
+            'option': {
+                'id': option.id,
+                'name': option.name,
+                'additional_price': float(option.additional_price),
+                'is_active': option.is_active,
+                'group_id': option.group_id
+            }
+        })
+    except Exception as e:
+        return handle_error(e, f"Failed to fetch option item {option_id}")
+
+@admin_api_bp.route('/options/<int:option_id>', methods=['PUT'])
+@admin_required
+def update_option_item(option_id):
+    """Update option item"""
+    try:
+        option = MenuOptionItem.query.get_or_404(option_id)
+        data = request.get_json()
+        
+        option.name = data.get('name', option.name)
+        option.additional_price = float(data.get('additional_price', option.additional_price))
+        
+        # Handle toggle functionality
+        if 'is_active' in data:
+            if data['is_active'] is None:
+                option.is_active = not option.is_active  # Toggle
+            else:
+                option.is_active = data['is_active']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'แก้ไขตัวเลือก "{option.name}" เรียบร้อยแล้ว'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return handle_error(e, f"Failed to update option item {option_id}")
+
+@admin_api_bp.route('/options/<int:option_id>', methods=['DELETE'])
+@admin_required
+def delete_option_item(option_id):
+    """Delete option item"""
+    try:
+        option = MenuOptionItem.query.get_or_404(option_id)
+        
+        option.is_active = False
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'ลบตัวเลือก "{option.name}" เรียบร้อยแล้ว'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return handle_error(e, f"Failed to delete option item {option_id}")
 
 @admin_api_bp.route('/zone', methods=['POST'])
 @admin_required

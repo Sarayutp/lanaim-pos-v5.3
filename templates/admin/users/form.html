@@ -1,0 +1,301 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ "แก้ไขผู้ใช้" if edit else "เพิ่มผู้ใช้ใหม่" }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8 text-white">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">{{ "แก้ไขผู้ใช้" if edit else "เพิ่มผู้ใช้ใหม่" }}</h1>
+                    <p class="mt-2 text-indigo-100">{{ ("แก้ไขข้อมูลผู้ใช้: " + user.username) if edit else "สร้างบัญชีผู้ใช้ใหม่สำหรับระบบ" }}</p>
+                </div>
+                <a href="{{ url_for('user_management.user_list') }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white border-opacity-30">
+                    <i class="fas fa-arrow-left mr-2"></i>กลับ
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <form method="POST" id="userForm">
+                    <!-- Basic Information -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h3>
+                        
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                                        ชื่อผู้ใช้ <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" 
+                                           id="username" 
+                                           name="username" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                                           value="{{ user.username if edit else '' }}"
+                                           placeholder="เช่น john_doe"
+                                           required>
+                                    <p class="mt-1 text-sm text-gray-500">ชื่อผู้ใช้สำหรับเข้าสู่ระบบ</p>
+                                </div>
+                                <div>
+                                    <label for="role" class="block text-sm font-medium text-gray-700 mb-2">
+                                        ตำแหน่ง <span class="text-red-500">*</span>
+                                    </label>
+                                    <select id="role" 
+                                            name="role" 
+                                            class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            required>
+                                        <option value="">เลือกตำแหน่ง</option>
+                                        <option value="admin" {{ 'selected' if edit and user.role == 'admin' else '' }}>ผู้ดูแลระบบ</option>
+                                        <option value="kitchen_staff" {{ 'selected' if edit and user.role == 'kitchen_staff' else '' }}>พนักงานครัว</option>
+                                        <option value="delivery_staff" {{ 'selected' if edit and user.role == 'delivery_staff' else '' }}>พนักงานส่งอาหาร</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="full_name" class="block text-sm font-medium text-gray-700 mb-2">ชื่อ-นามสกุล</label>
+                                <input type="text" 
+                                       id="full_name" 
+                                       name="full_name" 
+                                       class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                                       value="{{ user.full_name if edit else '' }}"
+                                       placeholder="เช่น นายจอห์น โด">
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">อีเมล</label>
+                                    <input type="email" 
+                                           id="email" 
+                                           name="email" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                                           value="{{ user.email if edit else '' }}"
+                                           placeholder="john@example.com">
+                                </div>
+                                <div>
+                                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">เบอร์โทรศัพท์</label>
+                                    <input type="tel" 
+                                           id="phone" 
+                                           name="phone" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                                           value="{{ user.phone if edit else '' }}"
+                                           placeholder="08X-XXX-XXXX">
+                                </div>
+                            </div>
+
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       id="is_active" 
+                                       name="is_active" 
+                                       class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                       {{ 'checked' if (edit and user.is_active) or not edit else '' }}>
+                                <label for="is_active" class="ml-2 text-sm font-medium text-gray-700">
+                                    เปิดใช้งานบัญชี
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Password Section -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                            {{ "เปลี่ยนรหัสผ่าน" if edit else "รหัสผ่าน" }}
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="{{ 'new_password' if edit else 'password' }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        {{ "รหัสผ่านใหม่" if edit else "รหัสผ่าน" }} 
+                                        {% if not edit %}<span class="text-red-500">*</span>{% endif %}
+                                    </label>
+                                    <input type="password" 
+                                           id="{{ 'new_password' if edit else 'password' }}" 
+                                           name="{{ 'new_password' if edit else 'password' }}" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                                           placeholder="••••••••"
+                                           {{ 'required' if not edit else '' }}>
+                                    {% if edit %}
+                                    <p class="mt-1 text-sm text-gray-500">เว้นว่างไว้หากไม่ต้องการเปลี่ยน</p>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-2">
+                                        ยืนยันรหัสผ่าน 
+                                        {% if not edit %}<span class="text-red-500">*</span>{% endif %}
+                                    </label>
+                                    <input type="password" 
+                                           id="confirm_password" 
+                                           name="confirm_password" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500" 
+                                           placeholder="••••••••"
+                                           {{ 'required' if not edit else '' }}>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <div class="flex">
+                                    <i class="fas fa-exclamation-triangle text-yellow-600 mr-2 mt-0.5"></i>
+                                    <div class="text-sm text-yellow-800">
+                                        <p class="font-medium">ข้อกำหนดรหัสผ่าน:</p>
+                                        <ul class="mt-1 list-disc list-inside space-y-1">
+                                            <li>ต้องมีความยาวอย่างน้อย 6 ตัวอักษร</li>
+                                            <li>ควรใช้ตัวอักษรและตัวเลขผสมกัน</li>
+                                            <li>หลีกเลี่ยงการใช้ข้อมูลส่วนตัวที่เดาได้ง่าย</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg">
+                            <i class="fas fa-save mr-2"></i>{{ "บันทึกการแก้ไข" if edit else "สร้างผู้ใช้" }}
+                        </button>
+                        <a href="{{ url_for('user_management.user_list') }}" class="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200 text-center">
+                            <i class="fas fa-times mr-2"></i>ยกเลิก
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Role Information -->
+            <div class="bg-blue-50 rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-blue-900 mb-4">
+                    <i class="fas fa-info-circle mr-2"></i>ข้อมูลตำแหน่ง
+                </h3>
+                <div class="space-y-3 text-sm text-blue-800">
+                    <div>
+                        <div class="font-medium">ผู้ดูแลระบบ</div>
+                        <div>เข้าถึงฟังก์ชันทั้งหมดในระบบ</div>
+                    </div>
+                    <div>
+                        <div class="font-medium">พนักงานครัว</div>
+                        <div>จัดการออเดอร์และสถานะการปรุงอาหาร</div>
+                    </div>
+                    <div>
+                        <div class="font-medium">พนักงานส่งอาหาร</div>
+                        <div>จัดการการส่งและติดตามออเดอร์</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Tips -->
+            <div class="bg-yellow-50 rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-yellow-900 mb-4">
+                    <i class="fas fa-shield-alt mr-2"></i>เทคนิคความปลอดภัย
+                </h3>
+                <ul class="space-y-2 text-sm text-yellow-800">
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        ใช้รหัสผ่านที่แข็งแกร่ง
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        เปลี่ยนรหัสผ่านเป็นประจำ
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        ปิดใช้งานบัญชีที่ไม่ใช้แล้ว
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        ตรวจสอบกิจกรรมเป็นประจำ
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Current User Info (Edit Mode) -->
+            {% if edit %}
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลปัจจุบัน</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">สร้างเมื่อ:</span>
+                        <span class="text-sm text-gray-900">{{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else '-' }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">แก้ไขล่าสุด:</span>
+                        <span class="text-sm text-gray-900">{{ user.updated_at.strftime('%d/%m/%Y %H:%M') if user.updated_at else '-' }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">เข้าสู่ระบบล่าสุด:</span>
+                        <span class="text-sm text-gray-900">{{ user.last_login.strftime('%d/%m/%Y %H:%M') if user.last_login else 'ยังไม่เคย' }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+document.getElementById('userForm').addEventListener('submit', function(e) {
+    const username = document.getElementById('username').value.trim();
+    const role = document.getElementById('role').value;
+    const password = document.getElementById('{{ "new_password" if edit else "password" }}').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    const isEdit = {{ 'true' if edit else 'false' }};
+    
+    if (!username) {
+        e.preventDefault();
+        alert('กรุณากรอกชื่อผู้ใช้');
+        document.getElementById('username').focus();
+        return;
+    }
+    
+    if (!role) {
+        e.preventDefault();
+        alert('กรุณาเลือกตำแหน่ง');
+        document.getElementById('role').focus();
+        return;
+    }
+    
+    // Password validation for new user or when changing password
+    if (!isEdit || password) {
+        if (!password) {
+            e.preventDefault();
+            alert('กรุณากรอกรหัสผ่าน');
+            document.getElementById('{{ "new_password" if edit else "password" }}').focus();
+            return;
+        }
+        
+        if (password.length < 6) {
+            e.preventDefault();
+            alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+            document.getElementById('{{ "new_password" if edit else "password" }}').focus();
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            alert('รหัสผ่านไม่ตรงกัน');
+            document.getElementById('confirm_password').focus();
+            return;
+        }
+    }
+});
+
+// Username validation (no spaces, special characters)
+document.getElementById('username').addEventListener('input', function(e) {
+    let value = e.target.value;
+    // Remove spaces and special characters except underscore and dash
+    value = value.replace(/[^a-zA-Z0-9_-]/g, '');
+    e.target.value = value;
+});
+</script>
+{% endblock %}

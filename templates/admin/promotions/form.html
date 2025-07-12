@@ -1,0 +1,407 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ "แก้ไขโปรโมชัน" if edit else "เพิ่มโปรโมชันใหม่" }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-8 text-white">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">{{ "แก้ไขโปรโมชัน" if edit else "เพิ่มโปรโมชันใหม่" }}</h1>
+                    <p class="mt-2 text-purple-100">{{ ("แก้ไขข้อมูลโปรโมชัน: " + promotion.name) if edit else "สร้างโปรโมชันและส่วนลดใหม่" }}</p>
+                </div>
+                <a href="{{ url_for('admin.promotion_list') }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white border-opacity-30">
+                    <i class="fas fa-arrow-left mr-2"></i>กลับ
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <form method="POST" id="promotionForm">
+                    <!-- Basic Information -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                                    ชื่อโปรโมชัน <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" 
+                                       id="name" 
+                                       name="name" 
+                                       class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500" 
+                                       value="{{ promotion.name if edit else '' }}"
+                                       placeholder="เช่น ลด 50% เมนูทั้งหมด"
+                                       required>
+                            </div>
+
+                            <div>
+                                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">คำอธิบาย</label>
+                                <textarea id="description" 
+                                          name="description" 
+                                          rows="3"
+                                          class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500" 
+                                          placeholder="รายละเอียดเพิ่มเติมเกี่ยวกับโปรโมชัน">{{ promotion.description if edit else '' }}</textarea>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="type" class="block text-sm font-medium text-gray-700 mb-2">
+                                        ประเภทโปรโมชัน <span class="text-red-500">*</span>
+                                    </label>
+                                    <select id="type" 
+                                            name="type" 
+                                            class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                                            required onchange="toggleDiscountFields()">
+                                        <option value="">เลือกประเภท</option>
+                                        <option value="percentage" {{ 'selected' if edit and promotion.type == 'percentage' else '' }}>ส่วนลดเปอร์เซ็นต์</option>
+                                        <option value="fixed_amount" {{ 'selected' if edit and promotion.type == 'fixed_amount' else '' }}>ส่วนลดจำนวนเงิน</option>
+                                        <option value="buy_x_get_y" {{ 'selected' if edit and promotion.type == 'buy_x_get_y' else '' }}>ซื้อ X แถม Y</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="minimum_order_amount" class="block text-sm font-medium text-gray-700 mb-2">ยอดขั้นต่ำ (บาท)</label>
+                                    <input type="number" 
+                                           id="minimum_order_amount" 
+                                           name="minimum_order_amount" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500" 
+                                           value="{{ promotion.minimum_order_amount if edit else '0' }}"
+                                           min="0"
+                                           step="0.01">
+                                </div>
+                            </div>
+
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       id="is_active" 
+                                       name="is_active" 
+                                       class="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                       {{ 'checked' if (edit and promotion.is_active) or not edit else '' }}>
+                                <label for="is_active" class="ml-2 text-sm font-medium text-gray-700">
+                                    เปิดใช้งานโปรโมชัน
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Discount Configuration -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">การตั้งค่าส่วนลด</h3>
+                        
+                        <!-- Percentage Discount -->
+                        <div id="percentage_fields" class="space-y-4 hidden">
+                            <div>
+                                <label for="discount_percentage" class="block text-sm font-medium text-gray-700 mb-2">
+                                    เปอร์เซ็นต์ส่วนลด <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="number" 
+                                           id="discount_percentage" 
+                                           name="discount_percentage" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500 pr-8" 
+                                           value="{{ promotion.discount_percentage if edit else '' }}"
+                                           min="1"
+                                           max="100"
+                                           step="0.01">
+                                    <span class="absolute right-3 top-2 text-gray-500">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fixed Amount Discount -->
+                        <div id="fixed_amount_fields" class="space-y-4 hidden">
+                            <div>
+                                <label for="discount_amount" class="block text-sm font-medium text-gray-700 mb-2">
+                                    จำนวนเงินส่วนลด <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="number" 
+                                           id="discount_amount" 
+                                           name="discount_amount" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500 pl-8" 
+                                           value="{{ promotion.discount_amount if edit else '' }}"
+                                           min="1"
+                                           step="0.01">
+                                    <span class="absolute left-3 top-2 text-gray-500">฿</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Buy X Get Y -->
+                        <div id="buy_x_get_y_fields" class="space-y-4 hidden">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="buy_quantity" class="block text-sm font-medium text-gray-700 mb-2">
+                                        ซื้อจำนวน <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="number" 
+                                           id="buy_quantity" 
+                                           name="buy_quantity" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500" 
+                                           value="{{ promotion.buy_quantity if edit else '' }}"
+                                           min="1">
+                                </div>
+                                <div>
+                                    <label for="get_quantity" class="block text-sm font-medium text-gray-700 mb-2">
+                                        แถมจำนวน <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="number" 
+                                           id="get_quantity" 
+                                           name="get_quantity" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500" 
+                                           value="{{ promotion.get_quantity if edit else '' }}"
+                                           min="1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Date & Usage Settings -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">ระยะเวลาและการใช้งาน</h3>
+                        
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">
+                                        วันที่เริ่มต้น <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="datetime-local" 
+                                           id="start_date" 
+                                           name="start_date" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500" 
+                                           value="{{ promotion.start_date.strftime('%Y-%m-%dT%H:%M') if edit and promotion.start_date else '' }}"
+                                           required>
+                                </div>
+                                <div>
+                                    <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">
+                                        วันที่สิ้นสุด <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="datetime-local" 
+                                           id="end_date" 
+                                           name="end_date" 
+                                           class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500" 
+                                           value="{{ promotion.end_date.strftime('%Y-%m-%dT%H:%M') if edit and promotion.end_date else '' }}"
+                                           required>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="usage_limit" class="block text-sm font-medium text-gray-700 mb-2">จำนวนครั้งที่ใช้ได้ (เว้นว่างหากไม่จำกัด)</label>
+                                <input type="number" 
+                                       id="usage_limit" 
+                                       name="usage_limit" 
+                                       class="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500" 
+                                       value="{{ promotion.usage_limit if edit and promotion.usage_limit else '' }}"
+                                       min="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Applicable Menus -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">เมนูที่เข้าร่วมโปรโมชัน</h3>
+                        <p class="text-sm text-gray-600 mb-4">เลือกเมนูที่ต้องการให้เข้าร่วมโปรโมชัน (หากไม่เลือก จะใช้กับทุกเมนู)</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                            {% for menu in menus %}
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       id="menu_{{ menu.id }}" 
+                                       name="applicable_menus" 
+                                       value="{{ menu.id }}"
+                                       class="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                       {{ 'checked' if edit and menu.id in applicable_menu_ids else '' }}>
+                                <label for="menu_{{ menu.id }}" class="ml-2 text-sm text-gray-700 truncate">
+                                    {{ menu.name }} (฿{{ menu.price }})
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg">
+                            <i class="fas fa-save mr-2"></i>{{ "บันทึกการแก้ไข" if edit else "สร้างโปรโมชัน" }}
+                        </button>
+                        <a href="{{ url_for('admin.promotion_list') }}" class="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200 text-center">
+                            <i class="fas fa-times mr-2"></i>ยกเลิก
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Promotion Types Info -->
+            <div class="bg-purple-50 rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-purple-900 mb-4">
+                    <i class="fas fa-info-circle mr-2"></i>ประเภทโปรโมชัน
+                </h3>
+                <div class="space-y-3 text-sm text-purple-800">
+                    <div>
+                        <div class="font-medium">ส่วนลดเปอร์เซ็นต์</div>
+                        <div>ลดราคาตามเปอร์เซ็นต์ที่กำหนด</div>
+                    </div>
+                    <div>
+                        <div class="font-medium">ส่วนลดจำนวนเงิน</div>
+                        <div>ลดราคาจำนวนเงินตายตัว</div>
+                    </div>
+                    <div>
+                        <div class="font-medium">ซื้อ X แถม Y</div>
+                        <div>ซื้อครบจำนวนได้รับของแถม</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="bg-yellow-50 rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-yellow-900 mb-4">
+                    <i class="fas fa-lightbulb mr-2"></i>เทคนิคโปรโมชัน
+                </h3>
+                <ul class="space-y-2 text-sm text-yellow-800">
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        ตั้งยอดขั้นต่ำเพื่อเพิ่มยอดขาย
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        จำกัดจำนวนครั้งเพื่อสร้างความเร่งด่วน
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        เลือกเมนูเฉพาะเพื่อกระตุ้นยอดขาย
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle mt-0.5 mr-2 text-yellow-600"></i>
+                        กำหนดเวลาที่เหมาะสมกับธุรกิจ
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Current Promotion Info (Edit Mode) -->
+            {% if edit %}
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลปัจจุบัน</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">สร้างเมื่อ:</span>
+                        <span class="text-sm text-gray-900">{{ promotion.created_at.strftime('%d/%m/%Y %H:%M') if promotion.created_at else '-' }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">ใช้งานแล้ว:</span>
+                        <span class="text-sm text-gray-900">{{ promotion.current_usage or 0 }} ครั้ง</span>
+                    </div>
+                    {% if promotion.usage_limit %}
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600">เหลือ:</span>
+                        <span class="text-sm text-gray-900">{{ promotion.usage_limit - (promotion.current_usage or 0) }} ครั้ง</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleDiscountFields() {
+    const type = document.getElementById('type').value;
+    const percentageFields = document.getElementById('percentage_fields');
+    const fixedAmountFields = document.getElementById('fixed_amount_fields');
+    const buyXGetYFields = document.getElementById('buy_x_get_y_fields');
+    
+    // Hide all fields first
+    percentageFields.classList.add('hidden');
+    fixedAmountFields.classList.add('hidden');
+    buyXGetYFields.classList.add('hidden');
+    
+    // Show relevant fields based on type
+    if (type === 'percentage') {
+        percentageFields.classList.remove('hidden');
+    } else if (type === 'fixed_amount') {
+        fixedAmountFields.classList.remove('hidden');
+    } else if (type === 'buy_x_get_y') {
+        buyXGetYFields.classList.remove('hidden');
+    }
+}
+
+// Form validation
+document.getElementById('promotionForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const type = document.getElementById('type').value;
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    if (!name) {
+        e.preventDefault();
+        alert('กรุณากรอกชื่อโปรโมชัน');
+        document.getElementById('name').focus();
+        return;
+    }
+    
+    if (!type) {
+        e.preventDefault();
+        alert('กรุณาเลือกประเภทโปรโมชัน');
+        document.getElementById('type').focus();
+        return;
+    }
+    
+    if (!startDate || !endDate) {
+        e.preventDefault();
+        alert('กรุณากรอกวันที่เริ่มต้นและสิ้นสุด');
+        return;
+    }
+    
+    if (new Date(endDate) <= new Date(startDate)) {
+        e.preventDefault();
+        alert('วันที่สิ้นสุดต้องหลังจากวันที่เริ่มต้น');
+        document.getElementById('end_date').focus();
+        return;
+    }
+    
+    // Validate type-specific fields
+    if (type === 'percentage') {
+        const percentage = document.getElementById('discount_percentage').value;
+        if (!percentage || percentage <= 0 || percentage > 100) {
+            e.preventDefault();
+            alert('กรุณากรอกเปอร์เซ็นต์ส่วนลดระหว่าง 1-100');
+            document.getElementById('discount_percentage').focus();
+            return;
+        }
+    } else if (type === 'fixed_amount') {
+        const amount = document.getElementById('discount_amount').value;
+        if (!amount || amount <= 0) {
+            e.preventDefault();
+            alert('กรุณากรอกจำนวนเงินส่วนลดที่มากกว่า 0');
+            document.getElementById('discount_amount').focus();
+            return;
+        }
+    } else if (type === 'buy_x_get_y') {
+        const buyQty = document.getElementById('buy_quantity').value;
+        const getQty = document.getElementById('get_quantity').value;
+        if (!buyQty || buyQty <= 0 || !getQty || getQty <= 0) {
+            e.preventDefault();
+            alert('กรุณากรอกจำนวนที่ซื้อและแถมที่มากกว่า 0');
+            return;
+        }
+    }
+});
+
+// Initialize fields on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleDiscountFields();
+});
+</script>
+{% endblock %}
