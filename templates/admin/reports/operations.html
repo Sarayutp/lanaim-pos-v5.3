@@ -1,0 +1,712 @@
+{% extends "admin/base.html" %}
+
+{% block title %}รายงานการดำเนินงาน - LanAim POS{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-8 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold">รายงานการดำเนินงาน</h1>
+                <p class="mt-2 text-purple-100">
+                    {% if report_type == 'customer' %}
+                        วิเคราะห์พฤติกรรมและข้อมูลลูกค้า ({{ period_days }} วันที่ผ่านมา)
+                    {% elif report_type == 'feedback' %}
+                        วิเคราะห์ความพึงพอใจและข้อเสนอแนะจากลูกค้า
+                    {% else %}
+                        ประสิทธิภาพการดำเนินงานและการจัดการออเดอร์ ({{ period_days }} วันที่ผ่านมา)
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{{ url_for('admin.reports_dashboard') }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white border-opacity-30">
+                <i class="fas fa-arrow-left mr-2"></i>กลับ
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="space-y-6">
+    <!-- Filters Section -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">ตัวกรองรายงาน</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Report Type Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทรายงาน</label>
+                <select id="reportTypeFilter" class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="operations" {{ 'selected' if report_type == 'operations' else '' }}>การดำเนินงาน</option>
+                    <option value="customer" {{ 'selected' if report_type == 'customer' else '' }}>ลูกค้า</option>
+                    <option value="feedback" {{ 'selected' if report_type == 'feedback' else '' }}>ความคิดเห็น</option>
+                </select>
+            </div>
+            
+            <!-- Period Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">ช่วงเวลา</label>
+                <select id="periodFilter" class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="7" {{ 'selected' if period_days == 7 else '' }}>7 วันที่ผ่านมา</option>
+                    <option value="14" {{ 'selected' if period_days == 14 else '' }}>14 วันที่ผ่านมา</option>
+                    <option value="30" {{ 'selected' if period_days == 30 else '' }}>30 วันที่ผ่านมา</option>
+                    <option value="60" {{ 'selected' if period_days == 60 else '' }}>60 วันที่ผ่านมา</option>
+                </select>
+            </div>
+            
+            <!-- Date Range -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น</label>
+                <input type="date" id="startDate" value="{{ start_date }}" 
+                       class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">วันที่สิ้นสุด</label>
+                <input type="date" id="endDate" value="{{ end_date }}" 
+                       class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+        </div>
+        
+        <div class="mt-4 flex space-x-3">
+            <button onclick="applyFilters()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-filter mr-2"></i>กรองข้อมูล
+            </button>
+            <button onclick="exportReport()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-download mr-2"></i>ส่งออก
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i class="fas fa-shopping-cart text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ออเดอร์ทั้งหมด</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_orders }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-check-circle text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">เสร็จสิ้น</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ completed_orders }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-coins text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">รายได้รวม</p>
+                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(total_revenue) }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                    {% if report_type == 'operations' %}
+                        <i class="fas fa-percentage text-xl"></i>
+                    {% elif report_type == 'customer' %}
+                        <i class="fas fa-users text-xl"></i>
+                    {% else %}
+                        <i class="fas fa-star text-xl"></i>
+                    {% endif %}
+                </div>
+                <div class="ml-4">
+                    {% if report_type == 'operations' %}
+                        <p class="text-sm font-medium text-gray-600">อัตราเสร็จสิ้น</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ "{:.1f}".format(completion_rate if completion_rate is defined else 0) }}%</p>
+                    {% elif report_type == 'customer' %}
+                        <p class="text-sm font-medium text-gray-600">ลูกค้าทั้งหมด</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ customer_data.total_customers if customer_data is defined else 0 }}</p>
+                    {% else %}
+                        <p class="text-sm font-medium text-gray-600">คะแนนเฉลี่ย</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ "{:.1f}".format(feedback_data.average_rating if feedback_data is defined else 0) }}/5</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Type Specific Content -->
+    {% if report_type == 'operations' %}
+        <!-- Operations Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Order Status Distribution -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">สถานะออเดอร์</h3>
+                <canvas id="statusChart" style="max-height: 300px;"></canvas>
+            </div>
+
+            <!-- Processing Times -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">เวลาดำเนินการเฉลี่ย</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-clock text-blue-600 mr-3"></i>
+                            <span class="text-sm font-medium text-gray-900">เวลารวม</span>
+                        </div>
+                        <span class="text-sm font-bold text-blue-600">{{ "{:.0f}".format(avg_fulfillment_time if avg_fulfillment_time is defined else 0) }} นาที</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-utensils text-green-600 mr-3"></i>
+                            <span class="text-sm font-medium text-gray-900">เตรียมอาหาร</span>
+                        </div>
+                        <span class="text-sm font-bold text-green-600">{{ "{:.0f}".format(avg_preparation_time if avg_preparation_time is defined else 0) }} นาที</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-shipping-fast text-yellow-600 mr-3"></i>
+                            <span class="text-sm font-medium text-gray-900">จัดส่ง</span>
+                        </div>
+                        <span class="text-sm font-bold text-yellow-600">{{ "{:.0f}".format(avg_delivery_time if avg_delivery_time is defined else 0) }} นาที</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Peak Hours Analysis -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6">ช่วงเวลาเร่งด่วน</h3>
+            <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                <canvas id="peakHoursChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Staff Performance -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">ประสิทธิภาพพนักงาน</h3>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">พนักงาน</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ออเดอร์ที่จัดการ</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เวลาเฉลี่ย</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประสิทธิภาพ</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for staff in staff_performance if staff_performance is defined %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ staff.name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ staff.orders_handled }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ staff.avg_time }} นาที
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ staff.efficiency }}%
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if staff.efficiency >= 95 %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">ดีเยี่ยม</span>
+                                {% elif staff.efficiency >= 90 %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">ดี</span>
+                                {% else %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">ปานกลาง</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    {% elif report_type == 'customer' %}
+        <!-- Customer Analytics Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Customer Segments -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">กลุ่มลูกค้า</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-plus text-blue-600 mr-3"></i>
+                            <span class="text-sm font-medium text-gray-900">ลูกค้าใหม่</span>
+                        </div>
+                        <span class="text-sm font-bold text-blue-600">{{ customer_data.new_customers if customer_data is defined else 0 }}</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-redo text-green-600 mr-3"></i>
+                            <span class="text-sm font-medium text-gray-900">ลูกค้าประจำ</span>
+                        </div>
+                        <span class="text-sm font-bold text-green-600">{{ customer_data.repeat_customers if customer_data is defined else 0 }}</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-crown text-purple-600 mr-3"></i>
+                            <span class="text-sm font-medium text-gray-900">ลูกค้า VIP</span>
+                        </div>
+                        <span class="text-sm font-bold text-purple-600">{{ customer_data.vip_customers if customer_data is defined else 0 }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Value Distribution -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">การกระจายมูลค่าออเดอร์</h3>
+                <canvas id="orderValueChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Customers -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Top Spenders -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">ลูกค้าที่ใช้จ่ายมากที่สุด</h3>
+                
+                {% if customer_data is defined and customer_data.top_customers %}
+                <div class="space-y-3">
+                    {% for customer in customer_data.top_customers[:5] %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                {{ loop.index }}
+                            </span>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">{{ customer.first_order.date().strftime('%Y-%m-%d') if customer.first_order else 'Unknown' }}</p>
+                                <p class="text-xs text-gray-500">{{ customer.orders }} ออเดอร์</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900">฿{{ "{:,.0f}".format(customer.total_spent) }}</p>
+                            <p class="text-xs text-gray-500">฿{{ "{:,.0f}".format(customer.avg_order_value) }}/ออเดอร์</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-users text-2xl text-gray-400 mb-2"></i>
+                    <p class="text-gray-500">ไม่มีข้อมูลลูกค้า</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Most Frequent Customers -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">ลูกค้าที่สั่งบ่อยที่สุด</h3>
+                
+                {% if customer_data is defined and customer_data.most_frequent %}
+                <div class="space-y-3">
+                    {% for customer in customer_data.most_frequent[:5] %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                {{ loop.index }}
+                            </span>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">{{ customer.first_order.date().strftime('%Y-%m-%d') if customer.first_order else 'Unknown' }}</p>
+                                <p class="text-xs text-gray-500">฿{{ "{:,.0f}".format(customer.total_spent) }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900">{{ customer.orders }} ครั้ง</p>
+                            <p class="text-xs text-gray-500">{{ "{:.1f}".format(customer.orders / period_days * 7) }} ครั้ง/สัปดาห์</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-users text-2xl text-gray-400 mb-2"></i>
+                    <p class="text-gray-500">ไม่มีข้อมูลลูกค้า</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Feedback Analytics Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Sentiment Analysis -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">การวิเคราะห์ความรู้สึก</h3>
+                <canvas id="sentimentChart" style="max-height: 300px;"></canvas>
+            </div>
+
+            <!-- Rating Distribution -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">การกระจายคะแนน</h3>
+                <div class="space-y-3">
+                    {% if feedback_data is defined %}
+                        {% for i in range(5, 0, -1) %}
+                        {% set count = feedback_data.rating_distribution.get(i|string, 0) %}
+                        {% set percentage = (count / feedback_data.total_feedback * 100) if feedback_data.total_feedback > 0 else 0 %}
+                        <div class="flex items-center">
+                            <div class="flex items-center w-16">
+                                <span class="text-sm font-medium text-gray-700">{{ i }}</span>
+                                <i class="fas fa-star text-yellow-400 ml-1"></i>
+                            </div>
+                            <div class="flex-grow mx-4">
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-yellow-400 h-3 rounded-full" style="width: {{ percentage }}%"></div>
+                                </div>
+                            </div>
+                            <div class="w-20 text-sm text-gray-600 text-right">
+                                {{ count }} ({{ "{:.0f}".format(percentage) }}%)
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Categories -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">การประเมินตามหมวดหมู่</h3>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หมวดหมู่</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ความคิดเห็นดี</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ความคิดเห็นไม่ดี</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รวม</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">คะแนน</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% if feedback_data is defined %}
+                            {% for category in feedback_data.feedback_categories %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {{ category.category }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">
+                                    {{ category.positive }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">
+                                    {{ category.negative }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ category.total }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% set score = (category.positive / category.total * 100) if category.total > 0 else 0 %}
+                                    <div class="flex items-center">
+                                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                            <div class="bg-green-600 h-2 rounded-full" style="width: {{ score }}%"></div>
+                                        </div>
+                                        <span class="text-sm text-gray-600">{{ "{:.0f}".format(score) }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Feedback and Improvement Areas -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Recent Feedback -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">ความคิดเห็นล่าสุด</h3>
+                
+                {% if feedback_data is defined and feedback_data.recent_feedback %}
+                <div class="space-y-4">
+                    {% for feedback in feedback_data.recent_feedback %}
+                    <div class="p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-900">{{ feedback.customer }}</span>
+                            <div class="flex">
+                                {% for i in range(1, 6) %}
+                                    <i class="fas fa-star {{ 'text-yellow-400' if i <= feedback.rating else 'text-gray-300' }}"></i>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-700 mb-2">{{ feedback.comment }}</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <span>{{ feedback.menu }}</span>
+                            <span>{{ feedback.date.strftime('%d/%m/%Y %H:%M') if feedback.date else '' }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-comments text-2xl text-gray-400 mb-2"></i>
+                    <p class="text-gray-500">ไม่มีความคิดเห็นล่าสุด</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Improvement Areas -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">จุดที่ควรปรับปรุง</h3>
+                
+                {% if feedback_data is defined and feedback_data.improvement_areas %}
+                <div class="space-y-3">
+                    {% for area in feedback_data.improvement_areas %}
+                    <div class="flex items-center justify-between p-3 rounded-lg {{ 'bg-red-50' if area.priority == 'high' else ('bg-yellow-50' if area.priority == 'medium' else 'bg-blue-50') }}">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ area.area }}</p>
+                            <p class="text-xs text-gray-500">{{ area.mentions }} ครั้ง</p>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full {{ 'bg-red-100 text-red-800' if area.priority == 'high' else ('bg-yellow-100 text-yellow-800' if area.priority == 'medium' else 'bg-blue-100 text-blue-800') }}">
+                            {{ 'ด่วนมาก' if area.priority == 'high' else ('ปานกลาง' if area.priority == 'medium' else 'ไม่ด่วน') }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-thumbs-up text-2xl text-green-500 mb-2"></i>
+                    <p class="text-green-600">ไม่มีจุดที่ต้องปรับปรุง</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if report_type == 'operations' %}
+        initStatusChart();
+        initPeakHoursChart();
+    {% elif report_type == 'customer' %}
+        initOrderValueChart();
+    {% else %}
+        initSentimentChart();
+    {% endif %}
+});
+
+{% if report_type == 'operations' %}
+function initStatusChart() {
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    
+    {% if status_counts is defined %}
+    const statusData = {{ status_counts | tojson }};
+    const statusNames = {{ status_names | tojson }};
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.values(statusNames),
+            datasets: [{
+                data: Object.values(statusData),
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.8)',   // blue
+                    'rgba(34, 197, 94, 0.8)',   // green
+                    'rgba(251, 191, 36, 0.8)',  // yellow
+                    'rgba(168, 85, 247, 0.8)',  // purple
+                    'rgba(249, 115, 22, 0.8)',  // orange
+                    'rgba(20, 184, 166, 0.8)',  // teal
+                    'rgba(139, 69, 19, 0.8)',   // brown
+                    'rgba(239, 68, 68, 0.8)'    // red
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    {% endif %}
+}
+
+function initPeakHoursChart() {
+    const ctx = document.getElementById('peakHoursChart').getContext('2d');
+    
+    {% if hourly_data is defined %}
+    const hourlyData = {{ hourly_data | tojson }};
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.values(hourlyData).map(d => d.hour),
+            datasets: [{
+                label: 'จำนวนออเดอร์',
+                data: Object.values(hourlyData).map(d => d.orders),
+                backgroundColor: 'rgba(168, 85, 247, 0.8)',
+                borderColor: 'rgba(168, 85, 247, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    {% endif %}
+}
+{% endif %}
+
+{% if report_type == 'customer' %}
+function initOrderValueChart() {
+    const ctx = document.getElementById('orderValueChart').getContext('2d');
+    
+    {% if customer_data is defined %}
+    const orderRanges = {{ customer_data.order_ranges | tojson }};
+    
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['0-100฿', '101-300฿', '301-500฿', '501-1000฿', '1000฿+'],
+            datasets: [{
+                data: Object.values(orderRanges),
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(34, 197, 94, 0.8)',
+                    'rgba(251, 191, 36, 0.8)',
+                    'rgba(168, 85, 247, 0.8)',
+                    'rgba(239, 68, 68, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    {% endif %}
+}
+{% endif %}
+
+{% if report_type == 'feedback' %}
+function initSentimentChart() {
+    const ctx = document.getElementById('sentimentChart').getContext('2d');
+    
+    {% if feedback_data is defined %}
+    const sentimentData = {{ feedback_data.sentiment_analysis | tojson }};
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['ดี', 'กลางๆ', 'ไม่ดี'],
+            datasets: [{
+                data: [sentimentData.positive, sentimentData.neutral, sentimentData.negative],
+                backgroundColor: [
+                    'rgba(34, 197, 94, 0.8)',   // green
+                    'rgba(251, 191, 36, 0.8)',  // yellow
+                    'rgba(239, 68, 68, 0.8)'    // red
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    {% endif %}
+}
+{% endif %}
+
+function applyFilters() {
+    const reportType = document.getElementById('reportTypeFilter').value;
+    const period = document.getElementById('periodFilter').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    const params = new URLSearchParams({
+        type: reportType,
+        period: period
+    });
+    
+    if (startDate && endDate) {
+        params.append('start_date', startDate);
+        params.append('end_date', endDate);
+    }
+    
+    window.location.href = `{{ url_for('admin.operations_report') }}?${params.toString()}`;
+}
+
+function exportReport() {
+    alert('ฟีเจอร์ส่งออกรายงานจะถูกพัฒนาในอนาคต');
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-container {
+    position: relative;
+    margin: auto;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        height: 220px !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1023px) {
+    .chart-container {
+        height: 280px !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .chart-container {
+        height: 320px !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}

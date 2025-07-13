@@ -1,0 +1,567 @@
+{% extends "admin/base.html" %}
+
+{% block title %}รายงานคลังสินค้า - LanAim POS{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+    <div class="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-8 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold">รายงานคลังสินค้า</h1>
+                <p class="mt-2 text-green-100">
+                    {% if report_type == 'usage' %}
+                        วิเคราะห์การใช้งานและการหมุนเวียนของสินค้า ({{ period_days }} วันที่ผ่านมา)
+                    {% elif report_type == 'low_stock' %}
+                        รายงานสินค้าใกล้หมดและต้องเติมสต็อก
+                    {% else %}
+                        ภาพรวมคลังสินค้าและมูลค่าสินค้าคงคลัง ({{ period_days }} วันที่ผ่านมา)
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{{ url_for('admin.reports_dashboard') }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white border-opacity-30">
+                <i class="fas fa-arrow-left mr-2"></i>กลับ
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="space-y-6">
+    <!-- Filters Section -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">ตัวกรองรายงาน</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Report Type Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทรายงาน</label>
+                <select id="reportTypeFilter" class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="overview" {{ 'selected' if report_type == 'overview' else '' }}>ภาพรวมคลัง</option>
+                    <option value="usage" {{ 'selected' if report_type == 'usage' else '' }}>การใช้งาน</option>
+                    <option value="low_stock" {{ 'selected' if report_type == 'low_stock' else '' }}>สินค้าใกล้หมด</option>
+                </select>
+            </div>
+            
+            <!-- Period Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">ช่วงเวลา</label>
+                <select id="periodFilter" class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="7" {{ 'selected' if period_days == 7 else '' }}>7 วันที่ผ่านมา</option>
+                    <option value="30" {{ 'selected' if period_days == 30 else '' }}>30 วันที่ผ่านมา</option>
+                    <option value="60" {{ 'selected' if period_days == 60 else '' }}>60 วันที่ผ่านมา</option>
+                    <option value="90" {{ 'selected' if period_days == 90 else '' }}>90 วันที่ผ่านมา</option>
+                </select>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex items-end space-x-3">
+                <button onclick="applyFilters()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-filter mr-2"></i>กรองข้อมูล
+                </button>
+                <button onclick="exportReport()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-download mr-2"></i>ส่งออก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <i class="fas fa-boxes text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">รายการสินค้า</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_items }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i class="fas fa-coins text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">มูลค่าคลัง</p>
+                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(total_value) }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-exclamation-triangle text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">สินค้าใกล้หมด</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ low_stock_items|length + critical_stock_items|length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-red-100 text-red-600">
+                    <i class="fas fa-trash text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ค่าของเสีย</p>
+                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(total_waste_value) }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Type Specific Content -->
+    {% if report_type == 'overview' %}
+        <!-- Overview Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Stock Distribution Chart -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">การกระจายระดับสต็อก</h3>
+                <canvas id="stockDistributionChart" style="max-height: 300px;"></canvas>
+            </div>
+
+            <!-- Movement Summary -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">สรุปการเคลื่อนไหวสต็อก</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-plus-circle text-green-600 mr-3"></i>
+                            <span class="text-sm font-medium text-gray-900">เข้าสต็อก</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900">{{ "{:,.0f}".format(movement_summary.in) }} หน่วย</p>
+                            <p class="text-xs text-gray-500">฿{{ "{:,.0f}".format(movement_value.in) }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-minus-circle text-red-600 mr-3"></i>
+                            <span class="text-sm font-medium text-gray-900">ออกจากสต็อก</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900">{{ "{:,.0f}".format(movement_summary.out) }} หน่วย</p>
+                            <p class="text-xs text-gray-500">฿{{ "{:,.0f}".format(movement_value.out) }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-edit text-blue-600 mr-3"></i>
+                            <span class="text-sm font-medium text-gray-900">ปรับปรุงสต็อก</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900">{{ "{:,.0f}".format(movement_summary.correction) }} หน่วย</p>
+                            <p class="text-xs text-gray-500">฿{{ "{:,.0f}".format(movement_value.correction) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Stock Movements -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">การเคลื่อนไหวล่าสุด</h3>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วัตถุดิบ</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวน</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หมายเหตุ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for movement in recent_movements %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ movement.created_at.strftime('%d/%m/%Y %H:%M') if movement.created_at else '' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ movement.ingredient.name if movement.ingredient else '' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% set movement_type = movement.type or 'correction' %}
+                                {% if movement_type == 'in' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">เข้าสต็อก</span>
+                                {% elif movement_type == 'out' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">ออกสต็อก</span>
+                                {% elif movement_type == 'waste' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">ของเสีย</span>
+                                {% else %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">ปรับปรุง</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ "{:,.2f}".format(movement.quantity if movement.quantity else 0) }} {{ movement.ingredient.unit if movement.ingredient else '' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ movement.reason or '-' }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if not recent_movements %}
+            <div class="text-center py-12">
+                <i class="fas fa-history text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-500 text-lg">ไม่มีการเคลื่อนไหวสต็อกในช่วงเวลานี้</p>
+            </div>
+            {% endif %}
+        </div>
+
+    {% elif report_type == 'usage' %}
+        <!-- Usage Analysis Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Top Consumed Items -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">วัตถุดิบที่ใช้มากที่สุด</h3>
+                
+                {% if top_consumed %}
+                <div class="space-y-3">
+                    {% for item in top_consumed %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                {{ loop.index }}
+                            </span>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">{{ item.ingredient.name }}</p>
+                                <p class="text-xs text-gray-500">{{ "{:.1f}".format(item.avg_daily_usage) }}/วัน</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900">{{ "{:,.1f}".format(item.total_used) }} {{ item.ingredient.unit }}</p>
+                            <p class="text-xs text-gray-500">฿{{ "{:,.0f}".format(item.total_value) }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-chart-bar text-2xl text-gray-400 mb-2"></i>
+                    <p class="text-gray-500">ไม่มีข้อมูลการใช้งาน</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Fast Moving vs Slow Moving -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">การหมุนเวียนสต็อก</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="text-md font-medium text-green-600 mb-2">หมุนเวียนเร็ว</h4>
+                        {% for item in fast_moving[:5] %}
+                        <div class="flex items-center justify-between p-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-900">{{ item.ingredient.name }}</span>
+                            <span class="text-sm font-medium text-green-600">
+                                {{ "{:.0f}".format(item.days_remaining) if item.days_remaining != float('inf') else '∞' }} วัน
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-md font-medium text-red-600 mb-2">หมุนเวียนช้า</h4>
+                        {% for item in slow_moving[:5] %}
+                        <div class="flex items-center justify-between p-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-900">{{ item.ingredient.name }}</span>
+                            <span class="text-sm font-medium text-red-600">
+                                {{ "{:.0f}".format(item.days_remaining) if item.days_remaining != float('inf') else '∞' }} วัน
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage Trends Chart -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6">แนวโน้มการใช้งาน</h3>
+            <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                <canvas id="usageChart"></canvas>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Low Stock Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Critical Stock Items -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-red-600 mb-4">
+                    <i class="fas fa-exclamation-circle mr-2"></i>สต็อกวิกฤต ({{ critical_stock_items|length }})
+                </h3>
+                
+                {% if critical_stock_items %}
+                <div class="space-y-3">
+                    {% for item in critical_stock_items %}
+                    <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ item.name }}</p>
+                            <p class="text-xs text-red-600">เหลือ {{ "{:,.1f}".format(item.stock_quantity) }} {{ item.unit }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-red-600">{{ "{:.0f}".format((item.stock_quantity / item.minimum_stock) * 100) if item.minimum_stock else 0 }}%</p>
+                            <p class="text-xs text-gray-500">ของขั้นต่ำ</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-check-circle text-2xl text-green-500 mb-2"></i>
+                    <p class="text-green-600">ไม่มีสินค้าในระดับวิกฤต</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Low Stock Items -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-yellow-600 mb-4">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>สต็อกใกล้หมด ({{ low_stock_items|length }})
+                </h3>
+                
+                {% if low_stock_items %}
+                <div class="space-y-3">
+                    {% for item in low_stock_items %}
+                    <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ item.name }}</p>
+                            <p class="text-xs text-yellow-600">เหลือ {{ "{:,.1f}".format(item.stock_quantity) }} {{ item.unit }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-yellow-600">{{ "{:.0f}".format((item.stock_quantity / item.minimum_stock) * 100) if item.minimum_stock else 0 }}%</p>
+                            <p class="text-xs text-gray-500">ของขั้นต่ำ</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-check-circle text-2xl text-green-500 mb-2"></i>
+                    <p class="text-green-600">ระดับสต็อกปกติทั้งหมด</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Reorder Recommendations -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">คำแนะนำการสั่งซื้อ</h3>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วัตถุดิบ</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สต็อกปัจจุบัน</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ระดับขั้นต่ำ</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">แนะนำสั่งซื้อ</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ค่าใช้จ่ายประมาณ</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for item in (critical_stock_items + low_stock_items) %}
+                        {% set recommended_order = (item.minimum_stock * 2 - item.stock_quantity) if item.minimum_stock else 50 %}
+                        {% set estimated_cost = recommended_order * item.cost_per_unit if item.cost_per_unit else 0 %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ item.name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ "{:,.1f}".format(item.stock_quantity) }} {{ item.unit }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ "{:,.1f}".format(item.minimum_stock) if item.minimum_stock else 'ไม่กำหนด' }} {{ item.unit }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">
+                                {{ "{:,.1f}".format(recommended_order) }} {{ item.unit }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                ฿{{ "{:,.0f}".format(estimated_cost) }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if item in critical_stock_items %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">ด่วนมาก</span>
+                                {% else %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">ด่วน</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if not (critical_stock_items + low_stock_items) %}
+            <div class="text-center py-12">
+                <i class="fas fa-check-circle text-4xl text-green-500 mb-4"></i>
+                <p class="text-gray-500 text-lg">ไม่ต้องสั่งซื้อเพิ่มในขณะนี้</p>
+            </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if report_type == 'overview' %}
+        initStockDistributionChart();
+    {% elif report_type == 'usage' %}
+        initUsageChart();
+    {% endif %}
+});
+
+{% if report_type == 'overview' %}
+function initStockDistributionChart() {
+    const ctx = document.getElementById('stockDistributionChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['ปกติ', 'ใกล้หมด', 'วิกฤต', 'เกินสต็อก'],
+            datasets: [{
+                data: [
+                    {{ stock_distribution.normal|length }},
+                    {{ stock_distribution.low|length }},
+                    {{ stock_distribution.critical|length }},
+                    {{ stock_distribution.overstocked|length }}
+                ],
+                backgroundColor: [
+                    'rgba(34, 197, 94, 0.8)',
+                    'rgba(251, 191, 36, 0.8)', 
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(59, 130, 246, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(34, 197, 94, 1)',
+                    'rgba(251, 191, 36, 1)',
+                    'rgba(239, 68, 68, 1)',
+                    'rgba(59, 130, 246, 1)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+{% endif %}
+
+{% if report_type == 'usage' %}
+function initUsageChart() {
+    const ctx = document.getElementById('usageChart').getContext('2d');
+    
+    const usageData = {{ top_consumed[:10] | tojson }};
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: usageData.map(item => item.ingredient.name),
+            datasets: [{
+                label: 'การใช้งาน (หน่วย)',
+                data: usageData.map(item => item.total_used),
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 30
+                    }
+                }
+            }
+        }
+    });
+}
+{% endif %}
+
+function applyFilters() {
+    const reportType = document.getElementById('reportTypeFilter').value;
+    const period = document.getElementById('periodFilter').value;
+    
+    const params = new URLSearchParams({
+        type: reportType,
+        period: period
+    });
+    
+    window.location.href = `{{ url_for('admin.inventory_report') }}?${params.toString()}`;
+}
+
+function exportReport() {
+    alert('ฟีเจอร์ส่งออกรายงานจะถูกพัฒนาในอนาคต');
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-container {
+    position: relative;
+    margin: auto;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        height: 220px !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1023px) {
+    .chart-container {
+        height: 280px !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .chart-container {
+        height: 320px !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
