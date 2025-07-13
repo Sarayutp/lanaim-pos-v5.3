@@ -1,28 +1,23 @@
-{% extends "admin/admin_base.html" %}
+{% extends "admin/base.html" %}
 
 {% block title %}กระทบยอดเงินสด - LanAim POS{% endblock %}
 
-{% block header %}
-<div class="flex items-center justify-between">
-    <div>
-        <h1 class="text-2xl font-bold text-gray-900">กระทบยอดเงินสด</h1>
-        <p class="text-gray-600">ตรวจสอบและกระทบยอดเงินสดประจำวัน</p>
-    </div>
-    
-    <div class="flex space-x-3">
-        <button onclick="printReport()" 
-                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-            <i class="fas fa-print mr-2"></i>พิมพ์รายงาน
-        </button>
-        <a href="{{ url_for('admin.reports') }}" 
-           class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-            <i class="fas fa-arrow-left mr-2"></i>กลับ
-        </a>
+{% block content %}
+<!-- Header Section -->
+<div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+    <div class="bg-gradient-to-r from-green-600 to-blue-600 px-6 py-8 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold">กระทบยอดเงินสด</h1>
+                <p class="mt-2 text-green-100">รายงานการกระทบยอดเงินสดประจำวัน</p>
+            </div>
+            <a href="{{ url_for('admin.reports_dashboard') }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg backdrop-blur-sm border border-white border-opacity-30">
+                <i class="fas fa-arrow-left mr-2"></i>กลับ
+            </a>
+        </div>
     </div>
 </div>
-{% endblock %}
 
-{% block content %}
 <div class="space-y-6">
     <!-- Date Selection -->
     <div class="bg-white rounded-xl shadow-lg p-6">
@@ -31,7 +26,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">วันที่</label>
                 <input type="date" id="reconcileDate" 
-                       value="{{ selected_date.strftime('%Y-%m-%d') if selected_date else today.strftime('%Y-%m-%d') }}"
+                       value="{{ reconciliation.report_date.strftime('%Y-%m-%d') if reconciliation.report_date else '' }}"
                        class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
             </div>
             <div class="pt-6">
@@ -52,7 +47,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">ยอดขายรวม</p>
-                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(total_sales if total_sales else 0) }}</p>
+                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(reconciliation.sales_summary.total_sales if reconciliation.sales_summary else 0) }}</p>
                 </div>
             </div>
         </div>
@@ -64,7 +59,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">เงินสดรับ</p>
-                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(cash_received if cash_received else 0) }}</p>
+                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(reconciliation.sales_summary.cash_sales if reconciliation.sales_summary else 0) }}</p>
                 </div>
             </div>
         </div>
@@ -76,7 +71,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">การโอน/บัตร</p>
-                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format(digital_payments if digital_payments else 0) }}</p>
+                    <p class="text-2xl font-bold text-gray-900">฿{{ "{:,.0f}".format((reconciliation.sales_summary.credit_card_sales + reconciliation.sales_summary.digital_wallet_sales) if reconciliation.sales_summary else 0) }}</p>
                 </div>
             </div>
         </div>
@@ -88,8 +83,8 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">ส่วนต่าง</p>
-                    <p class="text-2xl font-bold {{ 'text-red-600' if difference and difference < 0 else 'text-green-600' }}">
-                        ฿{{ "{:,.0f}".format(difference if difference else 0) }}
+                    <p class="text-2xl font-bold {{ 'text-red-600' if reconciliation.variance and reconciliation.variance < 0 else 'text-green-600' }}">
+                        ฿{{ "{:,.0f}".format(reconciliation.variance if reconciliation.variance else 0) }}
                     </p>
                 </div>
             </div>
@@ -108,19 +103,19 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">ยอดขายเงินสด</label>
                             <input type="number" id="systemCash" readonly
-                                   value="{{ cash_sales if cash_sales else 0 }}"
+                                   value="{{ reconciliation.sales_summary.cash_sales if reconciliation.sales_summary else 0 }}"
                                    class="w-full border-gray-300 rounded-md bg-gray-50">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">เงินทอน</label>
                             <input type="number" id="systemChange" readonly
-                                   value="{{ total_change if total_change else 0 }}"
+                                   value="{{ reconciliation.expenses.total_expenses if reconciliation.expenses else 0 }}"
                                    class="w-full border-gray-300 rounded-md bg-gray-50">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">เงินสดสุทธิ</label>
                             <input type="number" id="netCash" readonly
-                                   value="{{ net_cash if net_cash else 0 }}"
+                                   value="{{ reconciliation.expected_cash if reconciliation.expected_cash else 0 }}"
                                    class="w-full border-gray-300 rounded-md bg-gray-50 font-bold">
                         </div>
                     </div>
@@ -132,20 +127,20 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">เงินต้นยกมา</label>
                             <input type="number" id="openingCash" step="0.01"
-                                   value="{{ opening_cash if opening_cash else 0 }}"
+                                   value="{{ reconciliation.opening_cash if reconciliation.opening_cash else 0 }}"
                                    class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">เงินในลิ้นชัก</label>
                             <input type="number" id="actualCash" step="0.01"
-                                   value="{{ actual_cash if actual_cash else 0 }}"
+                                   value="{{ reconciliation.actual_cash if reconciliation.actual_cash else 0 }}"
                                    oninput="calculateDifference()"
                                    class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">เงินเบิกออก</label>
                             <input type="number" id="withdrawals" step="0.01"
-                                   value="{{ withdrawals if withdrawals else 0 }}"
+                                   value="{{ reconciliation.expenses.total_expenses if reconciliation.expenses else 0 }}"
                                    oninput="calculateDifference()"
                                    class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
@@ -169,7 +164,7 @@
             <div class="mt-6">
                 <label class="block text-sm font-medium text-gray-700 mb-2">หมายเหตุ</label>
                 <textarea id="notes" rows="3" placeholder="บันทึกข้อสังเกต หรือสาเหตุของความผิดแปลก..."
-                          class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500">{{ notes if notes else '' }}</textarea>
+                          class="w-full border-gray-300 rounded-md focus:border-indigo-500 focus:ring-indigo-500"></textarea>
             </div>
 
             <!-- Actions -->
@@ -205,28 +200,28 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    {% for record in reconciliation_history if reconciliation_history else [] %}
+                    <!-- Sample reconciliation history data -->
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {{ record.date.strftime('%d/%m/%Y') if record.date else '' }}
+                            {{ reconciliation.report_date.strftime('%d/%m/%Y') if reconciliation.report_date else '' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ฿{{ "{:,.2f}".format(record.system_cash if record.system_cash else 0) }}
+                            ฿{{ "{:,.2f}".format(reconciliation.expected_cash if reconciliation.expected_cash else 0) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ฿{{ "{:,.2f}".format(record.actual_cash if record.actual_cash else 0) }}
+                            ฿{{ "{:,.2f}".format(reconciliation.actual_cash if reconciliation.actual_cash else 0) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <span class="{{ 'text-red-600' if record.difference and record.difference < 0 else 'text-green-600' }}">
-                                ฿{{ "{:,.2f}".format(record.difference if record.difference else 0) }}
+                            <span class="{{ 'text-red-600' if reconciliation.variance and reconciliation.variance < 0 else 'text-green-600' }}">
+                                ฿{{ "{:,.2f}".format(reconciliation.variance if reconciliation.variance else 0) }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            {% if record.difference == 0 %}
+                            {% if reconciliation.variance == 0 %}
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                     ตรงกัน
                                 </span>
-                            {% elif record.difference and abs(record.difference) <= 10 %}
+                            {% elif reconciliation.variance and abs(reconciliation.variance) <= 10 %}
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                     ผิดแปลกเล็กน้อย
                                 </span>
@@ -237,20 +232,14 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ record.staff_name if record.staff_name else 'ระบบ' }}
+                            ระบบ
                         </td>
                     </tr>
-                    {% endfor %}
                 </tbody>
             </table>
         </div>
         
-        {% if not reconciliation_history %}
-        <div class="text-center py-12">
-            <i class="fas fa-file-invoice-dollar text-4xl text-gray-400 mb-4"></i>
-            <p class="text-gray-500 text-lg">ยังไม่มีประวัติการกระทบยอด</p>
-        </div>
-        {% endif %}
+        <!-- Always show the current reconciliation data -->
     </div>
 </div>
 

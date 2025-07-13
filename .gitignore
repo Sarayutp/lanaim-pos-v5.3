@@ -188,8 +188,21 @@ migrations/versions/*.py
 # Analysis and temporary scripts
 analyze_models.py
 fix_tests.py
+fix_sqlalchemy.py
+debug_run.py
+run_port8000.py
+run_working.py
+simple_run.py
+test_minimal.py
+test_server.py
 
 # Document files
 *.docx
 *.doc
 *.pdf
+
+# Database backup files
+*.db.backup
+
+# Old files
+*_old.*
